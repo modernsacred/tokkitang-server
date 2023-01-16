@@ -10,6 +10,6 @@ name = "bootstrap"
 path = "src/main.rs"
 
 [dependencies]
-lambda-web = { version = "0.2.1", features=["hyper"] }
+lambda-web = { path="lambda-web", features=["hyper"] }
 axum = "0.6.2"
 tokio = { version = "1" }
