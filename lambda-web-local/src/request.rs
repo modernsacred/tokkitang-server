@@ -18,7 +18,10 @@ impl LambdaHttpEvent<'_> {
     pub fn method<'a>(&'a self) -> &'a str {
         match self {
             Self::ApiGatewayHttpV2(event) => &event.request_context.http.method,
-            Self::ApiGatewayRestOrAlb(event) => &event.http_method,
+            Self::ApiGatewayRestOrAlb(event) => match event.request_context {
+                RestOrAlbRequestContext::Rest(ref context) => &context.http_method,
+                RestOrAlbRequestContext::Alb(ref context) => &context.http_method,
+            },
         }
     }
 
@@ -314,7 +317,7 @@ struct Http {
 pub(crate) struct ApiGatewayRestEvent<'a> {
     // path without stage
     path: String,
-    http_method: String,
+    // http_method: String,
     //#[serde(borrow)]
     body: Option<Cow<'a, str>>,
     #[serde(default)]
@@ -328,6 +331,10 @@ pub(crate) struct ApiGatewayRestEvent<'a> {
     // path_parameters: HashMap<String, String>,
     // query_string_parameters: HashMap<String, String>,
     // stage_variables: HashMap<String, String>,
+    resource: String,
+    query_string_parameters: HashMap<String, String>,
+    path_parameters: HashMap<String, String>,
+    stage_variables: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug)]
@@ -349,7 +356,7 @@ struct ApiGatewayRestRequestContext {
     // api_id: String,
     // authorizer: HashMap<String, Value>,
     // domain_prefix: String,
-    // http_method: String,
+    http_method: String,
     // protocol: String,
     // request_id: String,
     // request_time: String,
@@ -371,7 +378,9 @@ struct ApiGatewayRestIdentity {
 /// ALB Request context
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
-struct AlbRequestContext {}
+struct AlbRequestContext {
+    http_method: String,
+}
 
 // raw_path in API Gateway HTTP API V2 payload is percent decoded.
 // Path containing space or UTF-8 char is
