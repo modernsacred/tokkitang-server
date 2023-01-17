@@ -1,0 +1,48 @@
+[package]
+name = "lambda_http"
+version = "0.7.3"
+authors = [
+    "David Calavera <dcalaver@amazon.com>",
+    "Harold Sun <sunhua@amazon.com>",
+]
+edition = "2021"
+description = "Application Load Balancer and API Gateway event types for AWS Lambda"
+keywords = ["AWS", "Lambda", "APIGateway", "ALB", "API"]
+license = "Apache-2.0"
+homepage = "https://github.com/awslabs/aws-lambda-rust-runtime"
+repository = "https://github.com/awslabs/aws-lambda-rust-runtime"
+documentation = "https://docs.rs/lambda_runtime"
+categories = ["web-programming::http-server"]
+readme = "README.md"
+
+[features]
+default = ["apigw_rest", "apigw_http", "apigw_websockets", "alb"]
+apigw_rest = []
+apigw_http = []
+apigw_websockets = []
+alb = []
+
+[dependencies]
+base64 = "0.13.0"
+bytes = "1"
+http = "0.2"
+http-body = "0.4"
+hyper = "0.14.20"
+lambda_runtime = { path = "../lambda-runtime", version = "0.7" }
+serde = { version = "^1", features = ["derive"] }
+serde_json = "^1"
+serde_urlencoded = "0.7.0"
+mime = "0.3.16"
+encoding_rs = "0.8.31"
+url = "2.2.2"
+percent-encoding = "2.2.0"
+
+[dependencies.aws_lambda_events]
+version = "^0.7.2"
+default-features = false
+features = ["alb", "apigw"]
+
+[dev-dependencies]
+log = "^0.4"
+maplit = "1.0"
+tokio = { version = "1.0", features = ["macros"] }

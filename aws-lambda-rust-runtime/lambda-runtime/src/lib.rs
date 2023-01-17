@@ -59,14 +59,12 @@ impl Config {
     /// Attempts to read configuration from environment variables.
     pub fn from_env() -> Result<Self, Error> {
         let conf = Config {
-            function_name: env::var("AWS_LAMBDA_FUNCTION_NAME")
-                .expect("Missing AWS_LAMBDA_FUNCTION_NAME env var"),
+            function_name: env::var("AWS_LAMBDA_FUNCTION_NAME").expect("Missing AWS_LAMBDA_FUNCTION_NAME env var"),
             memory: env::var("AWS_LAMBDA_FUNCTION_MEMORY_SIZE")
                 .expect("Missing AWS_LAMBDA_FUNCTION_MEMORY_SIZE env var")
                 .parse::<i32>()
                 .expect("AWS_LAMBDA_FUNCTION_MEMORY_SIZE env var is not <i32>"),
-            version: env::var("AWS_LAMBDA_FUNCTION_VERSION")
-                .expect("Missing AWS_LAMBDA_FUNCTION_VERSION env var"),
+            version: env::var("AWS_LAMBDA_FUNCTION_VERSION").expect("Missing AWS_LAMBDA_FUNCTION_VERSION env var"),
             log_stream: env::var("AWS_LAMBDA_LOG_STREAM_NAME").unwrap_or_default(),
             log_group: env::var("AWS_LAMBDA_LOG_GROUP_NAME").unwrap_or_default(),
         };
@@ -129,11 +127,7 @@ where
             let request_span = match &ctx.xray_trace_id {
                 Some(trace_id) => {
                     env::set_var("_X_AMZN_TRACE_ID", trace_id);
-                    tracing::info_span!(
-                        "Lambda runtime invoke",
-                        requestId = request_id,
-                        xrayTraceId = trace_id
-                    )
+                    tracing::info_span!("Lambda runtime invoke", requestId = request_id, xrayTraceId = trace_id)
                 }
                 None => {
                     env::remove_var("_X_AMZN_TRACE_ID");
@@ -145,6 +139,7 @@ where
             async {
                 let body = hyper::body::to_bytes(body).await?;
                 trace!("response body - {}", std::str::from_utf8(&body)?);
+                println!("body: {:?}", std::str::from_utf8(&body)?);
 
                 #[cfg(debug_assertions)]
                 if parts.status.is_server_error() {
@@ -155,11 +150,9 @@ where
                 let body = match serde_json::from_slice(&body) {
                     Ok(body) => body,
                     Err(err) => {
+                        println!("오류!: {:?}", err);
                         let req = build_event_error_request(request_id, err)?;
-                        client
-                            .call(req)
-                            .await
-                            .expect("Unable to send response to Runtime APIs");
+                        client.call(req).await.expect("Unable to send response to Runtime APIs");
                         return Ok(());
                     }
                 };
@@ -167,9 +160,8 @@ where
                 let req = match handler.ready().await {
                     Ok(handler) => {
                         // Catches panics outside of a `Future`
-                        let task = panic::catch_unwind(panic::AssertUnwindSafe(|| {
-                            handler.call(LambdaEvent::new(body, ctx))
-                        }));
+                        let task =
+                            panic::catch_unwind(panic::AssertUnwindSafe(|| handler.call(LambdaEvent::new(body, ctx))));
 
                         let task = match task {
                             // Catches panics inside of the `Future`
@@ -204,10 +196,7 @@ where
                     Err(err) => build_event_error_request(request_id, err),
                 }?;
 
-                client
-                    .call(req)
-                    .await
-                    .expect("Unable to send response to Runtime APIs");
+                client.call(req).await.expect("Unable to send response to Runtime APIs");
                 Ok::<(), Error>(())
             }
             .instrument(request_span)
@@ -217,15 +206,12 @@ where
     }
 }
 
-fn incoming<C>(
-    client: &Client<C>,
-) -> impl Stream<Item = Result<http::Response<hyper::Body>, Error>> + Send + '_
+fn incoming<C>(client: &Client<C>) -> impl Stream<Item = Result<http::Response<hyper::Body>, Error>> + Send + '_
 where
     C: Service<http::Uri> + Clone + Send + Sync + Unpin + 'static,
     <C as Service<http::Uri>>::Future: Unpin + Send,
     <C as Service<http::Uri>>::Error: Into<Box<dyn std::error::Error + Send + Sync>>,
-    <C as Service<http::Uri>>::Response:
-        AsyncRead + AsyncWrite + Connection + Unpin + Send + 'static,
+    <C as Service<http::Uri>>::Response: AsyncRead + AsyncWrite + Connection + Unpin + Send + 'static,
 {
     async_stream::stream! {
         loop {
@@ -266,9 +252,7 @@ where
 {
     trace!("Loading config from env");
     let config = Config::from_env()?;
-    let client = Client::builder()
-        .build()
-        .expect("Unable to create a runtime client");
+    let client = Client::builder().build().expect("Unable to create a runtime client");
     let runtime = Runtime { client };
 
     let client = &runtime.client;
@@ -296,8 +280,7 @@ mod endpoint_tests {
     use crate::{
         incoming,
         requests::{
-            EventCompletionRequest, EventErrorRequest, IntoRequest, IntoResponse, NextEventRequest,
-            NextEventResponse,
+            EventCompletionRequest, EventErrorRequest, IntoRequest, IntoResponse, NextEventRequest, NextEventResponse,
         },
         simulated,
         types::Diagnostic,
@@ -321,10 +304,7 @@ mod endpoint_tests {
     async fn next_event(req: &Request<Body>) -> Result<Response<Body>, Error> {
         let path = "/2018-06-01/runtime/invocation/next";
         assert_eq!(req.method(), Method::GET);
-        assert_eq!(
-            req.uri().path_and_query().unwrap(),
-            &PathAndQuery::from_static(path)
-        );
+        assert_eq!(req.uri().path_and_query().unwrap(), &PathAndQuery::from_static(path));
         let body = json!({"message": "hello"});
 
         let rsp = NextEventResponse {
@@ -361,9 +341,7 @@ mod endpoint_tests {
         let expected = "unhandled";
         assert_eq!(req.headers()[header], HeaderValue::try_from(expected)?);
 
-        let rsp = Response::builder()
-            .status(StatusCode::ACCEPTED)
-            .body(Body::empty())?;
+        let rsp = Response::builder().status(StatusCode::ACCEPTED).body(Body::empty())?;
         Ok(rsp)
     }
 
@@ -378,9 +356,7 @@ mod endpoint_tests {
             .collect::<Vec<&str>>();
         match path[1..] {
             ["2018-06-01", "runtime", "invocation", "next"] => next_event(&req).await,
-            ["2018-06-01", "runtime", "invocation", id, "response"] => {
-                complete_event(&req, id).await
-            }
+            ["2018-06-01", "runtime", "invocation", id, "response"] => complete_event(&req, id).await,
             ["2018-06-01", "runtime", "invocation", id, "error"] => event_err(&req, id).await,
             ["2018-06-01", "runtime", "init", "error"] => unimplemented!(),
             _ => unimplemented!(),
@@ -426,10 +402,7 @@ mod endpoint_tests {
 
         assert_eq!(rsp.status(), StatusCode::OK);
         let header = "lambda-runtime-deadline-ms";
-        assert_eq!(
-            rsp.headers()[header],
-            &HeaderValue::try_from("1542409706888")?
-        );
+        assert_eq!(rsp.headers()[header], &HeaderValue::try_from("1542409706888")?);
 
         // shutdown server...
         tx.send(()).expect("Receiver has been dropped");
@@ -521,9 +494,7 @@ mod endpoint_tests {
             .build()
             .expect("Unable to build client");
 
-        async fn func(
-            event: crate::LambdaEvent<serde_json::Value>,
-        ) -> Result<serde_json::Value, Error> {
+        async fn func(event: crate::LambdaEvent<serde_json::Value>) -> Result<serde_json::Value, Error> {
             let (event, _) = event.into_parts();
             Ok(event)
         }
@@ -566,9 +537,7 @@ mod endpoint_tests {
 
     async fn run_panicking_handler<F>(func: F) -> Result<(), Error>
     where
-        F: FnMut(
-            crate::LambdaEvent<serde_json::Value>,
-        ) -> BoxFuture<'static, Result<serde_json::Value, Error>>,
+        F: FnMut(crate::LambdaEvent<serde_json::Value>) -> BoxFuture<'static, Result<serde_json::Value, Error>>,
     {
         let (client, server) = io::duplex(64);
         let (_tx, rx) = oneshot::channel();
