@@ -388,7 +388,7 @@ struct ApiGatewayRestRequestContext {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ApiGatewayRestIdentity {
-    cognito_identity_poolId: Option<String>,
+    cognito_identity_pool_id: Option<String>,
     account_id: Option<String>,
     cognito_identity_id: Option<String>,
     caller: Option<String>,
