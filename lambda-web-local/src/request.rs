@@ -317,12 +317,12 @@ struct Http {
 pub(crate) struct ApiGatewayRestEvent<'a> {
     // path without stage
     path: String,
-    // http_method: String,
+    http_method: String,
     //#[serde(borrow)]
     body: Option<Cow<'a, str>>,
     #[serde(default)]
     is_base64_encoded: bool,
-    multi_value_headers: HashMap<String, Vec<String>>,
+    multi_value_headers: Option<HashMap<String, Vec<String>>>,
     #[serde(default)]
     multi_value_query_string_parameters: Option<HashMap<String, Vec<String>>>,
     // request_context = None when called from ALB
