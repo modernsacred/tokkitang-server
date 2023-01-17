@@ -1,4 +1,9 @@
-use axum::{routing::get, Router};
+mod extensions;
+mod middlewares;
+mod models;
+mod routes;
+mod utils;
+
 use lambda_web::{is_running_on_lambda, run_hyper_on_lambda, LambdaError};
 use std::net::SocketAddr;
 
@@ -15,9 +20,7 @@ async fn health() -> &'static str {
 #[tokio::main]
 async fn main() -> Result<(), LambdaError> {
     // build our application with a route
-    let app = Router::new()
-        .route("/", get(root))
-        .route("/health", get(health));
+    let app = routes::app::router().await;
 
     if is_running_on_lambda() {
         // Run app on AWS Lambda
