@@ -33,7 +33,12 @@ impl LambdaHttpEvent<'_> {
             Self::ApiGatewayRestOrAlb(event) => {
                 if let RestOrAlbRequestContext::Rest(context) = &event.request_context {
                     Some(&context.domain_name)
-                } else if let Some(host_headers) = event.multi_value_headers.get("host") {
+                } else if let Some(host_headers) = event
+                    .multi_value_headers
+                    .as_ref()
+                    .map(|e| e.get("host"))
+                    .flatten()
+                {
                     host_headers.first().map(|h| h as &str)
                 } else {
                     None
@@ -102,11 +107,15 @@ impl LambdaHttpEvent<'_> {
 
                 headers
             }
-            Self::ApiGatewayRestOrAlb(event) => event
-                .multi_value_headers
-                .iter()
-                .flat_map(|(k, vec)| vec.iter().map(move |v| (k as &str, Cow::from(v as &str))))
-                .collect(),
+            Self::ApiGatewayRestOrAlb(event) => match &event.multi_value_headers {
+                Some(multi_value_headers) => multi_value_headers
+                    .iter()
+                    .flat_map(|(k, vec)| vec.iter().map(move |v| (k as &str, Cow::from(v as &str))))
+                    .collect(),
+                None => {
+                    vec![]
+                }
+            },
         }
     }
 
@@ -123,7 +132,12 @@ impl LambdaHttpEvent<'_> {
                 }
             }
             Self::ApiGatewayRestOrAlb(event) => {
-                if let Some(cookie_headers) = event.multi_value_headers.get("cookie") {
+                if let Some(cookie_headers) = event
+                    .multi_value_headers
+                    .as_ref()
+                    .map(|e| e.get("cookie"))
+                    .flatten()
+                {
                     cookie_headers
                         .iter()
                         .flat_map(|v| v.split(";"))
@@ -160,7 +174,12 @@ impl LambdaHttpEvent<'_> {
                 }
             }
             Self::ApiGatewayRestOrAlb(event) => {
-                if let Some(header_vals) = event.multi_value_headers.get("accept-encoding") {
+                if let Some(header_vals) = event
+                    .multi_value_headers
+                    .as_ref()
+                    .map(|e| e.get("accept-encoding"))
+                    .flatten()
+                {
                     for header_val in header_vals {
                         for elm in header_val.to_ascii_lowercase().split(',') {
                             if let Some(algo_name) = elm.split(';').next() {
