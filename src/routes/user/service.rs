@@ -32,8 +32,9 @@ impl UserService {
         let email_index_list = self
             .client
             .scan()
-            .table_name(User::NAME)
-            .filter_expression(format!("email = {}", email))
+            .table_name(IndexEmailForUser::NAME)
+            .filter_expression("email = :email")
+            .expression_attribute_values(":email", AttributeValue::S(email))
             .send()
             .await?;
 
