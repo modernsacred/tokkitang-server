@@ -327,14 +327,11 @@ pub(crate) struct ApiGatewayRestEvent<'a> {
     multi_value_query_string_parameters: Option<HashMap<String, Vec<String>>>,
     // request_context = None when called from ALB
     request_context: RestOrAlbRequestContext,
-    // headers: HashMap<String, String>,
-    // path_parameters: HashMap<String, String>,
-    // query_string_parameters: HashMap<String, String>,
-    // stage_variables: HashMap<String, String>,
+    headers: HashMap<String, String>,
+    path_parameters: Option<HashMap<String, String>>,
+    query_string_parameters: Option<HashMap<String, String>>,
+    stage_variables: Option<HashMap<String, String>>,
     resource: String,
-    query_string_parameters: HashMap<String, String>,
-    path_parameters: HashMap<String, String>,
-    stage_variables: HashMap<String, String>,
 }
 
 #[derive(Deserialize, Debug)]
