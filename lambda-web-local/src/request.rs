@@ -331,26 +331,27 @@ struct Http {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub(crate) struct ApiGatewayRestEvent<'a> {
+    resource: String,
     // path without stage
     path: String,
     http_method: String,
     headers: HashMap<String, String>,
+    #[serde(default)]
+    multi_value_headers: Option<HashMap<String, Vec<String>>>,
+    #[serde(default)]
+    query_string_parameters: Option<HashMap<String, String>>,
+    #[serde(default)]
+    multi_value_query_string_parameters: Option<HashMap<String, Vec<String>>>,
+    #[serde(default)]
+    path_parameters: Option<HashMap<String, String>>,
+    #[serde(default)]
+    stage_variables: Option<HashMap<String, String>>,
+    // request_context = None when called from ALB
+    request_context: RestOrAlbRequestContext,
     //#[serde(borrow)]
     body: Option<Cow<'a, str>>,
     #[serde(default)]
     is_base64_encoded: bool,
-    multi_value_headers: Option<HashMap<String, Vec<String>>>,
-    #[serde(default)]
-    multi_value_query_string_parameters: Option<HashMap<String, Vec<String>>>,
-    // request_context = None when called from ALB
-    request_context: RestOrAlbRequestContext,
-    #[serde(default)]
-    path_parameters: Option<HashMap<String, String>>,
-    #[serde(default)]
-    query_string_parameters: Option<HashMap<String, String>>,
-    #[serde(default)]
-    stage_variables: Option<HashMap<String, String>>,
-    resource: String,
 }
 
 #[derive(Deserialize, Debug)]
@@ -364,31 +365,41 @@ enum RestOrAlbRequestContext {
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ApiGatewayRestRequestContext {
-    domain_name: String,
-    identity: ApiGatewayRestIdentity,
+    resource_id: String,
+    resource_path: String,
+    http_method: String,
+    extended_request_id: String,
+    request_time: String,
     // Path with stage
     path: String,
-    // account_id: String,
-    // api_id: String,
-    // authorizer: HashMap<String, Value>,
-    // domain_prefix: String,
-    // http_method: String,
-    // protocol: String,
-    // request_id: String,
-    // request_time: String,
-    // request_time_epoch: i64,
-    // resource_id: String,
-    // resource_path: String,
-    // stage: String,
+    account_id: String,
+    protocol: String,
+    stage: String,
+    domain_prefix: String,
+    request_time_epoch: i64,
+    request_id: String,
+    identity: ApiGatewayRestIdentity,
+    domain_name: String,
+    api_id: String,
+    //authorizer: HashMap<String, Value>,
 }
 
 /// API Gateway REST API identity
 #[derive(Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 struct ApiGatewayRestIdentity {
-    #[allow(dead_code)]
-    access_key: Option<String>,
+    cognito_identity_poolId: Option<String>,
+    account_id: Option<String>,
+    cognito_identity_id: Option<String>,
+    caller: Option<String>,
     source_ip: String,
+    principal_org_id: Option<String>,
+    access_key: Option<String>,
+    cognito_authentication_type: Option<String>,
+    cognito_authentication_provider: Option<String>,
+    user_arn: Option<String>,
+    user_agent: String,
+    user: Option<String>,
 }
 
 /// ALB Request context
