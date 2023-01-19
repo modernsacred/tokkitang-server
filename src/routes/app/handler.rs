@@ -12,6 +12,7 @@ use axum::{
 
 use crate::extensions::{CurrentUser, DynamoClient};
 
+use crate::routes::redirect;
 use crate::{
     middlewares::auth_middleware,
     routes::{auth, user},
@@ -23,6 +24,7 @@ pub(crate) async fn router() -> Router {
         .route("/health", get(health)) // 배포시 비활성화
         .nest("/user", user::router().await)
         .nest("/auth", auth::router().await)
+        .nest("/redirect", redirect::router().await)
         .route_layer(middleware::from_fn(auth_middleware))
         .layer(Extension(DynamoClient::get_client().await));
 
