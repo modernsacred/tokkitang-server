@@ -90,7 +90,7 @@ async fn signup_github(
 
     let access_token = auth_service.get_github_access_token(body.code).await;
 
-    println!("{:?}", access_token);
+    println!("access_token: {:?}", access_token);
 
     (StatusCode::INTERNAL_SERVER_ERROR).into_response()
 }

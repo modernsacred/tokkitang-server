@@ -23,7 +23,7 @@ use super::dto::GithubRedirectCodeRequest;
 pub(crate) async fn router() -> Router {
     let app = Router::new()
         .route("/github/code", get(get_github_code))
-        .route("/github/access-token", get(get_github_code));
+        .route("/github/access-token", get(get_github_access_token));
 
     app
 }

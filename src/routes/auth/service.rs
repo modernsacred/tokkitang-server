@@ -25,20 +25,20 @@ impl AuthService {
     pub async fn get_github_access_token(&self, code: String) -> Result<String, Box<dyn Error>> {
         let client_secret = std::env::var("GITHUB_SECRET").unwrap();
         let client_id = std::env::var("GITHUB_CLIENT_ID").unwrap();
-        let redirect_url = std::env::var("GITHUB_REDIRECT_URL").unwrap();
+        let redirect_url = "https://ksauqt5f5er2djql3atquzas4e0ofpla.lambda-url.ap-northeast-2.on.aws/redirect/github/access-token".into();
 
         #[derive(serde::Serialize)]
         struct GetAccessTokenRequestBody {
             client_secret: String,
             client_id: String,
-            // redirect_url: String,
+            redirect_url: String,
             code: String,
-        };
+        }
 
         let body = GetAccessTokenRequestBody {
             client_secret,
             client_id,
-            // redirect_url,
+            redirect_url,
             code,
         };
 
