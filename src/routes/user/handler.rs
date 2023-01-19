@@ -80,7 +80,7 @@ async fn signup_github(
     database: Extension<Arc<Client>>,
     Json(body): Json<SignupGithubRequest>,
 ) -> impl IntoResponse {
-    let user_service = UserService::new(database);
+    let _user_service = UserService::new(database.clone());
     let auth_service = AuthService::new(database);
 
     let mut response = SignupResponse {

@@ -22,11 +22,12 @@ impl AuthService {
         jwt::sign(epoch, user_id)
     }
 
-    pub fn get_github_access_token(code: String) -> Result<String, Box<dyn Error>> {
+    pub async fn get_github_access_token(&self, code: String) -> Result<String, Box<dyn Error>> {
         let client_secret = std::env::var("GITHUB_SECRET").unwrap();
         let client_id = std::env::var("GITHUB_CLIENT_ID").unwrap();
         let redirect_url = "https://tokkitang.com/redirect/github-login".to_owned();
 
+        #[derive(serde::Serialize)]
         struct GetAccessTokenRequestBody {
             client_secret: String,
             client_id: String,
@@ -34,7 +35,7 @@ impl AuthService {
             code: String,
         };
 
-        let body = redirect_url {
+        let body = GetAccessTokenRequestBody {
             client_secret,
             client_id,
             redirect_url,
@@ -44,11 +45,11 @@ impl AuthService {
         let client = reqwest::Client::new();
         let result = client
             .post("https://github.com/login/oauth/access_token")
-            .body(body)
+            .body(serde_json::to_string(&body).unwrap())
             .send()
             .await?;
 
-        #[derive(Deserialize)]
+        #[derive(serde::Deserialize)]
         struct GetAccessTokenResponseBody {
             access_token: String,
         };
