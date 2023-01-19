@@ -27,6 +27,10 @@ jobs:
           packages: musl-tools # provides musl-gcc
           version: 1.0
 
+      # for compile openssl
+      - name: ssl 
+        run: sudo apt-get install libxcb-render0-dev libxcb-shape0-dev libxcb-xfixes0-dev libspeechd-dev libxkbcommon-dev libssl-dev
+
       - name: build
         run: cargo build --release --target x86_64-unknown-linux-musl
 

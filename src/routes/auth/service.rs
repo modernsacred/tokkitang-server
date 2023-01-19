@@ -31,14 +31,14 @@ impl AuthService {
         struct GetAccessTokenRequestBody {
             client_secret: String,
             client_id: String,
-            redirect_url: String,
+            // redirect_url: String,
             code: String,
         };
 
         let body = GetAccessTokenRequestBody {
             client_secret,
             client_id,
-            redirect_url,
+            // redirect_url,
             code,
         };
 
