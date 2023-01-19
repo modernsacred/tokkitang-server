@@ -10,16 +10,19 @@ use axum::{
 
 use crate::{
     models::{InsertUser, User},
+    routes::auth::AuthService,
     utils::{generate_uuid, hash_password},
 };
 
 use super::{
-    dto::{SignupRequest, SignupResponse},
+    dto::{SignupGithubRequest, SignupRequest, SignupResponse},
     UserService,
 };
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/signup", post(signup));
+    let app = Router::new()
+        .route("/signup", post(signup))
+        .route("/signup/github", post(signup_github));
 
     app
 }
@@ -71,4 +74,23 @@ async fn signup(
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }
+}
+
+async fn signup_github(
+    database: Extension<Arc<Client>>,
+    Json(body): Json<SignupGithubRequest>,
+) -> impl IntoResponse {
+    let user_service = UserService::new(database);
+    let auth_service = AuthService::new(database);
+
+    let mut response = SignupResponse {
+        email_duplicate: false,
+        user_id: "".into(),
+    };
+
+    let access_token = auth_service.get_github_access_token(body.code).await;
+
+    println!("{:?}", access_token);
+
+    (StatusCode::INTERNAL_SERVER_ERROR).into_response()
 }
