@@ -22,17 +22,14 @@ use super::dto::GithubRedirectCodeRequest;
 
 pub(crate) async fn router() -> Router {
     let app = Router::new()
-        .route("/github/code", get(get_github_code))
+        .route("/github", get(get_github_code))
         .route("/github/access-token", get(get_github_access_token));
 
     app
 }
 
 async fn get_github_code(Query(query): Query<GithubRedirectCodeRequest>) -> impl IntoResponse {
-    let url = format!(
-        "https://tokkitang.com/redirect/github-login?code={}",
-        query.code
-    );
+    let url = format!("https://tokkitang.com/redirect/github?code={}", query.code);
 
     Redirect::permanent(url.as_str()).into_response()
 }
