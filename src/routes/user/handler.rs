@@ -89,8 +89,11 @@ async fn signup_github(
     };
 
     let access_token = auth_service.get_github_access_token(body.code).await;
+    let access_token = "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".to_owned();
 
     println!("access_token: {:?}", access_token);
+
+    auth_service.get_github_user(access_token).await;
 
     (StatusCode::INTERNAL_SERVER_ERROR).into_response()
 }

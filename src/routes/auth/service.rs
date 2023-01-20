@@ -3,9 +3,13 @@ use std::sync::Arc;
 use aws_sdk_dynamodb::Client;
 use axum::Extension;
 use epoch_timestamp::Epoch;
+use reqwest::header;
 use std::error::Error;
 
-use crate::{models::User, utils::jwt};
+use crate::{
+    models::User,
+    utils::{http, jwt},
+};
 
 pub struct AuthService {
     _client: Extension<Arc<Client>>,
@@ -23,51 +27,47 @@ impl AuthService {
     }
 
     pub async fn get_github_access_token(&self, code: String) -> Result<String, Box<dyn Error>> {
+        let headers = http::default_header();
+
         let client_secret = std::env::var("GITHUB_SECRET").unwrap();
         let client_id = std::env::var("GITHUB_CLIENT_ID").unwrap();
-        let redirect_url = "https://ksauqt5f5er2djql3atquzas4e0ofpla.lambda-url.ap-northeast-2.on.aws/redirect/github/access-token".into();
 
         #[derive(serde::Serialize)]
         struct GetAccessTokenRequestBody {
             client_secret: String,
             client_id: String,
-            redirect_url: String,
             code: String,
         }
 
         let body = GetAccessTokenRequestBody {
             client_secret,
             client_id,
-            redirect_url,
             code,
         };
 
         let body = serde_json::to_string(&body).unwrap();
 
-        println!("body {}", body);
-
         let client = reqwest::Client::new();
         let result = client
             .post("https://github.com/login/oauth/access_token")
             .body(body)
+            .headers(headers)
             .send()
             .await?;
 
-        #[derive(serde::Deserialize)]
-        struct GetAccessTokenResponseBody {
-            access_token: String,
-        };
-
         let result = result.text().await?;
 
-        println!("?? {}", result);
-
-        let result: GetAccessTokenResponseBody = serde_json::from_str(result.as_str())?;
-
-        Ok(result.access_token)
+        Ok(result.replace("access_token=", ""))
     }
 
-    pub fn get_github_user(access_token: String) -> Result<String, Box<dyn Error>> {
+    pub async fn get_github_user(&self, access_token: String) -> Result<String, Box<dyn Error>> {
+        let mut headers = http::default_header();
+        let bearer = format!("Bearer {}", access_token);
+        headers.insert(
+            "Authorization",
+            header::HeaderValue::from_str(bearer.as_str()).unwrap(),
+        );
+
         unimplemented!();
     }
 }

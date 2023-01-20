@@ -6,3 +6,5 @@ pub use hash::*;
 
 pub mod jwt;
 pub use jwt::*;
+
+pub mod http;

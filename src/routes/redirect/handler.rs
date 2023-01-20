@@ -21,9 +21,7 @@ use crate::{
 use super::dto::GithubRedirectCodeRequest;
 
 pub(crate) async fn router() -> Router {
-    let app = Router::new()
-        .route("/github", get(get_github_code))
-        .route("/github/access-token", get(get_github_access_token));
+    let app = Router::new().route("/github", get(get_github_code));
 
     app
 }
@@ -32,12 +30,4 @@ async fn get_github_code(Query(query): Query<GithubRedirectCodeRequest>) -> impl
     let url = format!("https://tokkitang.com/redirect/github?code={}", query.code);
 
     Redirect::permanent(url.as_str()).into_response()
-}
-
-async fn get_github_access_token(
-    Query(params): Query<HashMap<String, String>>,
-) -> impl IntoResponse {
-    println!("{:?}", params);
-
-    format!("{:?}", params).into_response()
 }
