@@ -81,20 +81,58 @@ async fn signup_github(
     database: Extension<Arc<Client>>,
     Json(body): Json<SignupGithubRequest>,
 ) -> impl IntoResponse {
-    let _user_service = UserService::new(database.clone());
-    let auth_service = AuthService::new(database);
-
+    let auth_service = AuthService::new(database.clone());
+    let service = UserService::new(database);
     let mut response = SignupResponse {
         email_duplicate: false,
         user_id: "".into(),
     };
 
-    let access_token = auth_service.get_github_access_token(body.code).await;
-    let access_token = "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".to_owned();
+    match service.exists_email(body.email.clone()).await {
+        Ok(exists) => {
+            if exists {
+                response.email_duplicate = true;
+                return (StatusCode::BAD_REQUEST, Json(response)).into_response();
+            }
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
 
-    println!("access_token: {:?}", access_token);
+    let email = body.email;
+    let nickname = body.nickname;
+    let original_password = body.password;
+    let password_salt = generate_uuid();
+    let hashed_password = hash_password(original_password, &password_salt);
 
-    auth_service.get_github_user(access_token).await;
+    let github_user = auth_service.get_github_user(body.access_token).await;
 
-    (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+    let github_user = match github_user {
+        Some(github_user) => github_user,
+        None => {
+            return (StatusCode::BAD_REQUEST).into_response();
+        }
+    };
+
+    let user_data = User {
+        id: uuid::Uuid::new_v4().to_string(),
+        email,
+        password: hashed_password,
+        nickname,
+        password_salt,
+        github_id: Some(github_user.id.to_string()),
+    };
+
+    match service.create_user(user_data).await {
+        Ok(user_id) => {
+            response.user_id = user_id;
+            Json(response).into_response()
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
 }

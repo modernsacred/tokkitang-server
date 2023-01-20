@@ -11,6 +11,8 @@ use crate::{
     utils::{http, jwt},
 };
 
+use super::dto::GithubUserResponse;
+
 pub struct AuthService {
     _client: Extension<Arc<Client>>,
 }
@@ -72,7 +74,7 @@ impl AuthService {
         Some(result.access_token)
     }
 
-    pub async fn get_github_user(&self, access_token: String) -> Option<String> {
+    pub async fn get_github_user(&self, access_token: String) -> Option<GithubUserResponse> {
         let mut headers = http::default_header();
         let bearer = format!("Bearer {}", access_token);
         headers.insert(
@@ -90,8 +92,9 @@ impl AuthService {
             .ok()?;
 
         let result = result.text().await.ok()?;
-        println!("result: {}", result);
 
-        Some("".into())
+        let user = serde_json::from_str(result.as_str()).ok()?;
+
+        Some(user)
     }
 }
