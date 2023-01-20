@@ -24,4 +24,7 @@ aws-sdk-dynamodb = "0.23.0"
 epoch-timestamp = "1.0.0"
 dotenv = "0.15.0"
 reqwest = { version = "0.11", features = ["json"] }
-# openssl = { version = "0.10", features = ["vendored"] }
+
+# 배포 전용 디펜던시
+[target.'cfg(unix)'.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }
