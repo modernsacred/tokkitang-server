@@ -10,17 +10,19 @@ use axum::{
 
 use crate::{
     models::{InsertUser, User},
-    routes::user::UserService,
+    routes::{auth::dto::GithubAccessTokenResponse, user::UserService},
     utils::{generate_uuid, hash_password},
 };
 
 use super::{
-    dto::{LoginRequest, LoginResponse},
+    dto::{GithubAccessTokenRequest, LoginRequest, LoginResponse},
     AuthService,
 };
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/login", post(login));
+    let app = Router::new()
+        .route("/login", post(login))
+        .route("/access-token/github", post(get_github_access_token));
 
     app
 }
@@ -64,4 +66,23 @@ async fn login(
     }
 
     Json(response).into_response()
+}
+
+async fn get_github_access_token(
+    database: Extension<Arc<Client>>,
+    Json(body): Json<GithubAccessTokenRequest>,
+) -> impl IntoResponse {
+    let _user_service = UserService::new(database.clone());
+    let auth_service = AuthService::new(database);
+
+    let access_token = auth_service.get_github_access_token(body.code).await;
+
+    match access_token {
+        Some(access_token) => {
+            let response = GithubAccessTokenResponse { access_token };
+
+            Json(response).into_response()
+        }
+        None => (StatusCode::BAD_REQUEST).into_response(),
+    }
 }

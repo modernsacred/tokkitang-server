@@ -56,11 +56,20 @@ impl AuthService {
             .await
             .ok()?;
 
+        #[derive(serde::Deserialize)]
+        struct GetAccessTokenResponseBody {
+            access_token: String,
+            #[allow(dead_code)]
+            token_type: String,
+            #[allow(dead_code)]
+            scope: String,
+        }
+
         let result = result.text().await.ok()?;
 
-        println!("access_token: {}", result);
+        let result = serde_json::from_str::<GetAccessTokenResponseBody>(result.as_str()).ok()?;
 
-        Some(result.replace("access_token=", ""))
+        Some(result.access_token)
     }
 
     pub async fn get_github_user(&self, access_token: String) -> Option<String> {
