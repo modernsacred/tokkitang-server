@@ -38,6 +38,13 @@ impl User {
             AttributeValue::S(self.password_salt.to_owned()),
         );
 
+        if let Some(github_id) = self.github_id.clone() {
+            map.insert(
+                "github_id".to_string(),
+                AttributeValue::S(github_id.to_owned()),
+            );
+        }
+
         Some(map)
     }
 
