@@ -26,7 +26,7 @@ impl AuthService {
         jwt::sign(epoch, user_id)
     }
 
-    pub async fn get_github_access_token(&self, code: String) -> Result<String, Box<dyn Error>> {
+    pub async fn get_github_access_token(&self, code: String) -> Option<String> {
         let headers = http::default_header();
 
         let client_secret = std::env::var("GITHUB_SECRET").unwrap();
@@ -53,21 +53,34 @@ impl AuthService {
             .body(body)
             .headers(headers)
             .send()
-            .await?;
+            .await
+            .ok()?;
 
-        let result = result.text().await?;
+        let result = result.text().await.ok()?;
 
-        Ok(result.replace("access_token=", ""))
+        Some(result.replace("access_token=", ""))
     }
 
-    pub async fn get_github_user(&self, access_token: String) -> Result<String, Box<dyn Error>> {
+    pub async fn get_github_user(&self, access_token: String) -> Option<String> {
         let mut headers = http::default_header();
         let bearer = format!("Bearer {}", access_token);
         headers.insert(
             "Authorization",
             header::HeaderValue::from_str(bearer.as_str()).unwrap(),
         );
+        headers.insert("User-Agent", header::HeaderValue::from_static("tokkitang"));
 
-        unimplemented!();
+        let client = reqwest::Client::new();
+        let result = client
+            .get("https://api.github.com/user")
+            .headers(headers)
+            .send()
+            .await
+            .ok()?;
+
+        let result = result.text().await.ok()?;
+        println!("result: {}", result);
+
+        Some("".into())
     }
 }
