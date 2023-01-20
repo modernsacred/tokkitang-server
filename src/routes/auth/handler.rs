@@ -44,6 +44,7 @@ async fn login(
         Ok(user) => {
             if let Some(user) = user {
                 let salt = user.password_salt;
+
                 let hashed_password = hash_password(password, &salt);
 
                 if hashed_password == user.password {

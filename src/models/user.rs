@@ -47,7 +47,10 @@ impl User {
         let email = hashmap?.get("email")?.as_s().ok()?;
         let password = hashmap?.get("password")?.as_s().ok()?;
         let password_salt = hashmap?.get("password_salt")?.as_s().ok()?;
-        let github_id = hashmap?.get("github_id")?.as_s().ok().map(|e| e.to_owned());
+        let github_id = hashmap?
+            .get("github_id")
+            .map(|e| e.as_s().ok().map(|e| e.to_owned()))
+            .flatten();
 
         Some(User {
             id: id.to_owned(),
