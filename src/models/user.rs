@@ -12,6 +12,7 @@ pub struct User {
     pub email: String,
     pub password: String,
     pub password_salt: String,
+    pub github_id: Option<String>,
 }
 
 impl User {
@@ -46,6 +47,7 @@ impl User {
         let email = hashmap?.get("email")?.as_s().ok()?;
         let password = hashmap?.get("password")?.as_s().ok()?;
         let password_salt = hashmap?.get("password_salt")?.as_s().ok()?;
+        let github_id = hashmap?.get("github_id")?.as_s().ok().map(|e| e.to_owned());
 
         Some(User {
             id: id.to_owned(),
@@ -53,6 +55,7 @@ impl User {
             email: email.to_owned(),
             password: password.to_owned(),
             password_salt: password_salt.to_owned(),
+            github_id,
         })
     }
 }

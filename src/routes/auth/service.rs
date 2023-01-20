@@ -58,6 +58,8 @@ impl AuthService {
 
         let result = result.text().await.ok()?;
 
+        println!("access_token: {}", result);
+
         Some(result.replace("access_token=", ""))
     }
 

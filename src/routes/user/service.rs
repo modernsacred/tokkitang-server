@@ -4,7 +4,7 @@ use aws_sdk_dynamodb::{model::AttributeValue, Client};
 use axum::Extension;
 use std::error::Error;
 
-use crate::models::{IndexEmailForUser, User};
+use crate::models::User;
 
 pub struct UserService {
     client: Extension<Arc<Client>>,
@@ -19,7 +19,7 @@ impl UserService {
         let result = self
             .client
             .scan()
-            .table_name(IndexEmailForUser::NAME)
+            .table_name(User::NAME)
             .filter_expression("email = :email")
             .expression_attribute_values(":email", AttributeValue::S(email))
             .send()
@@ -29,32 +29,19 @@ impl UserService {
     }
 
     pub async fn find_by_email(&self, email: String) -> Result<Option<User>, Box<dyn Error>> {
-        let email_index_list = self
+        let scan_result = self
             .client
             .scan()
-            .table_name(IndexEmailForUser::NAME)
+            .table_name(User::NAME)
             .filter_expression("email = :email")
             .expression_attribute_values(":email", AttributeValue::S(email))
             .send()
             .await?;
 
-        let user_id = email_index_list
-            .items()
-            .map(|e| e.get(0).map(|e| e.get("user_id")).flatten())
-            .flatten();
+        let user_list = scan_result.items();
 
-        match user_id {
-            Some(user_id) => {
-                let user = self
-                    .client
-                    .get_item()
-                    .table_name(User::NAME)
-                    .key("id", user_id.to_owned())
-                    .send()
-                    .await?;
-
-                Ok(User::from_hashmap(user.item()))
-            }
+        match user_list {
+            Some(user_list) => Ok(User::from_hashmap(user_list.get(0))),
             None => Ok(None),
         }
     }
@@ -82,20 +69,20 @@ impl UserService {
             .send()
             .await?;
 
-        let index_email = IndexEmailForUser {
-            email: user_data.email,
-            user_id: user_data.id.clone(),
-        };
+        // let index_email = IndexEmailForUser {
+        //     email: user_data.email,
+        //     user_id: user_data.id.clone(),
+        // };
 
-        let input = index_email.to_hashmap();
+        // let input = index_email.to_hashmap();
 
-        let _email_index = self
-            .client
-            .put_item()
-            .table_name(IndexEmailForUser::NAME)
-            .set_item(input)
-            .send()
-            .await?;
+        // let _email_index = self
+        //     .client
+        //     .put_item()
+        //     .table_name(IndexEmailForUser::NAME)
+        //     .set_item(input)
+        //     .send()
+        //     .await?;
 
         Ok(user_data.id)
     }

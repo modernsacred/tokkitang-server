@@ -62,6 +62,7 @@ async fn signup(
         password: hashed_password,
         nickname,
         password_salt,
+        github_id: None,
     };
 
     match service.create_user(user_data).await {
