@@ -46,6 +46,27 @@ impl UserService {
         }
     }
 
+    pub async fn find_by_github_id(
+        &self,
+        github_id: String,
+    ) -> Result<Option<User>, Box<dyn Error>> {
+        let scan_result = self
+            .client
+            .scan()
+            .table_name(User::NAME)
+            .filter_expression("github_id = :github_id")
+            .expression_attribute_values(":github_id", AttributeValue::S(github_id))
+            .send()
+            .await?;
+
+        let user_list = scan_result.items();
+
+        match user_list {
+            Some(user_list) => Ok(User::from_hashmap(user_list.get(0))),
+            None => Ok(None),
+        }
+    }
+
     pub async fn find_by_id(&self, user_id: String) -> Result<Option<User>, Box<dyn Error>> {
         let user = self
             .client

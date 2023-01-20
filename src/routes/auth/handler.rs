@@ -15,13 +15,17 @@ use crate::{
 };
 
 use super::{
-    dto::{GithubAccessTokenRequest, LoginRequest, LoginResponse},
+    dto::{
+        GithubAccessTokenRequest, GithubLoginRequest, GithubLoginResponse, LoginRequest,
+        LoginResponse,
+    },
     AuthService,
 };
 
 pub async fn router() -> Router {
     let app = Router::new()
         .route("/login", post(login))
+        .route("/login/github", post(login_github))
         .route("/access-token/github", post(get_github_access_token));
 
     app
@@ -66,6 +70,61 @@ async fn login(
     }
 
     Json(response).into_response()
+}
+
+async fn login_github(
+    client: Extension<Arc<Client>>,
+    Json(body): Json<GithubLoginRequest>,
+) -> impl IntoResponse {
+    let auth_service = AuthService::new(client.clone());
+    let user_service = UserService::new(client);
+
+    let github_user = auth_service.get_github_user(body.access_token).await;
+
+    let github_user = match github_user {
+        Some(github_user) => github_user,
+        None => {
+            let response = GithubLoginResponse {
+                success: false,
+                access_token: "".into(),
+                need_signup: false,
+            };
+
+            return Json(response).into_response();
+        }
+    };
+
+    match user_service
+        .find_by_github_id(github_user.id.to_string())
+        .await
+    {
+        Ok(user) => {
+            if let Some(user) = user {
+                let user_id = user.id;
+                let access_token = auth_service.get_access_token(user_id);
+
+                let response = GithubLoginResponse {
+                    success: true,
+                    access_token,
+                    need_signup: false,
+                };
+
+                Json(response).into_response()
+            } else {
+                let response = GithubLoginResponse {
+                    success: false,
+                    access_token: "".into(),
+                    need_signup: true,
+                };
+
+                Json(response).into_response()
+            }
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+        }
+    }
 }
 
 async fn get_github_access_token(
