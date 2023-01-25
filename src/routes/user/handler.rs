@@ -103,7 +103,7 @@ async fn signup_github(
 
     let email = body.email;
     let nickname = body.nickname;
-    let original_password = body.password;
+    let original_password = "github signup".into();
     let password_salt = generate_uuid();
     let hashed_password = hash_password(original_password, &password_salt);
 
