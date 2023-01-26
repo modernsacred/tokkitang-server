@@ -9,6 +9,7 @@ use axum::{
 };
 
 use crate::{
+    middlewares::auth,
     models::{InsertUser, User},
     routes::auth::AuthService,
     utils::{generate_uuid, hash_password},
@@ -31,16 +32,19 @@ async fn signup(
     database: Extension<Arc<Client>>,
     Json(body): Json<SignupRequest>,
 ) -> impl IntoResponse {
-    let service = UserService::new(database);
+    let service = UserService::new(database.clone());
+    let auth_service = AuthService::new(database);
     let mut response = SignupResponse {
         email_duplicate: false,
-        user_id: "".into(),
+        access_token: "".into(),
+        success: false,
     };
 
     match service.exists_email(body.email.clone()).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
+                response.success = false;
                 return (StatusCode::BAD_REQUEST, Json(response)).into_response();
             }
         }
@@ -67,7 +71,10 @@ async fn signup(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            response.user_id = user_id;
+            let access_token = auth_service.get_access_token(user_id);
+
+            response.access_token = access_token;
+            response.success = true;
             Json(response).into_response()
         }
         Err(error) => {
@@ -85,13 +92,15 @@ async fn signup_github(
     let service = UserService::new(database);
     let mut response = SignupResponse {
         email_duplicate: false,
-        user_id: "".into(),
+        access_token: "".into(),
+        success: false,
     };
 
     match service.exists_email(body.email.clone()).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
+                response.success = false;
                 return (StatusCode::BAD_REQUEST, Json(response)).into_response();
             }
         }
@@ -127,7 +136,7 @@ async fn signup_github(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            response.user_id = user_id;
+            response.access_token = auth_service.get_access_token(user_id);
             Json(response).into_response()
         }
         Err(error) => {
