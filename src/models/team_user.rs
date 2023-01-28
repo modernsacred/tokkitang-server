@@ -67,6 +67,7 @@ impl TeamUser {
         Some(map)
     }
 
+    #[allow(dead_code)]
     pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
         let team_id = hashmap?.get("team_id")?.as_s().ok()?.to_owned();
         let user_id = hashmap?.get("user_id")?.as_s().ok()?.to_owned();

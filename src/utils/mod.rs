@@ -8,3 +8,6 @@ pub mod jwt;
 pub use jwt::*;
 
 pub mod http;
+
+pub mod error;
+pub use error::*;
