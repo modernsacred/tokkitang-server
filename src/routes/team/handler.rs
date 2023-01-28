@@ -22,7 +22,7 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/team", post(create_team));
+    let app = Router::new().route("/", post(create_team));
 
     app
 }
