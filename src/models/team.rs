@@ -47,10 +47,9 @@ impl Team {
         let description = hashmap?.get("description")?.as_s().ok()?.to_owned();
         let owner_id = hashmap?.get("owner_id")?.as_s().ok()?.to_owned();
         let thumbnail_url = hashmap?
-            .get("thumbnail_url")?
-            .as_s()
-            .ok()
-            .map(|e| e.to_owned());
+            .get("thumbnail_url")
+            .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
+            .flatten();
 
         Some(Team {
             id: id.to_owned(),

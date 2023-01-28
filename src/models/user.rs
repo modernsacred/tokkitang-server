@@ -67,10 +67,9 @@ impl User {
             .map(|e| e.as_s().ok().map(|e| e.to_owned()))
             .flatten();
         let thumbnail_url = hashmap?
-            .get("thumbnail_url")?
-            .as_s()
-            .ok()
-            .map(|e| e.to_owned());
+            .get("thumbnail_url")
+            .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
+            .flatten();
 
         Some(User {
             id: id.to_owned(),

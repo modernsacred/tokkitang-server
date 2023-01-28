@@ -61,6 +61,8 @@ async fn login(
 
                     response.access_token = access_token;
                 }
+            } else {
+                println!("유저 없음");
             }
         }
         Err(error) => {
