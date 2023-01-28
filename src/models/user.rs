@@ -13,6 +13,7 @@ pub struct User {
     pub password: String,
     pub password_salt: String,
     pub github_id: Option<String>,
+    pub thumbnail_url: Option<String>,
 }
 
 impl User {
@@ -38,6 +39,13 @@ impl User {
             AttributeValue::S(self.password_salt.to_owned()),
         );
 
+        if let Some(thumbnail_url) = self.thumbnail_url.clone() {
+            map.insert(
+                "thumbnail_url".to_string(),
+                AttributeValue::S(thumbnail_url),
+            );
+        }
+
         if let Some(github_id) = self.github_id.clone() {
             map.insert(
                 "github_id".to_string(),
@@ -58,6 +66,11 @@ impl User {
             .get("github_id")
             .map(|e| e.as_s().ok().map(|e| e.to_owned()))
             .flatten();
+        let thumbnail_url = hashmap?
+            .get("thumbnail_url")?
+            .as_s()
+            .ok()
+            .map(|e| e.to_owned());
 
         Some(User {
             id: id.to_owned(),
@@ -66,6 +79,7 @@ impl User {
             password: password.to_owned(),
             password_salt: password_salt.to_owned(),
             github_id,
+            thumbnail_url,
         })
     }
 }
