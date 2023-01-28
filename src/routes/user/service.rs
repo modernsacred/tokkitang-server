@@ -40,8 +40,6 @@ impl UserService {
 
         let user_list = scan_result.items();
 
-        println!("으악 {:?}", user_list);
-
         match user_list {
             Some(user_list) => Ok(User::from_hashmap(user_list.get(0))),
             None => Ok(None),
