@@ -12,16 +12,14 @@ use axum::{
 
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
-use crate::routes::{redirect, team};
-use crate::{
-    middlewares::auth_middleware,
-    routes::{auth, user},
-};
+use crate::middlewares::auth_middleware;
+use crate::routes::{auth, redirect, team, user, utils};
 
 pub(crate) async fn router() -> Router {
     let app = Router::new()
         .route("/", get(index))
         .route("/health", get(health)) // 배포시 비활성화
+        .nest("/utils", utils::router().await)
         .nest("/user", user::router().await)
         .nest("/auth", auth::router().await)
         .nest("/redirect", redirect::router().await)
