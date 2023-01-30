@@ -25,7 +25,7 @@ pub async fn router() -> Router {
 }
 
 async fn upload_user_thumbnail(
-    Extension(s3_client): Extension<aws_sdk_s3::Client>,
+    Extension(s3_client): Extension<Arc<aws_sdk_s3::Client>>,
     mut files: Multipart,
 ) -> impl IntoResponse {
     let bucket_name = "tokkitang";
