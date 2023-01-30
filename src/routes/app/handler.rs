@@ -10,7 +10,7 @@ use axum::{
     Extension, Json, Router,
 };
 
-use crate::extensions::{CurrentUser, DynamoClient};
+use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
 use crate::routes::{redirect, team};
 use crate::{
@@ -27,7 +27,8 @@ pub(crate) async fn router() -> Router {
         .nest("/redirect", redirect::router().await)
         .nest("/team", team::router().await)
         .route_layer(middleware::from_fn(auth_middleware))
-        .layer(Extension(DynamoClient::get_client().await));
+        .layer(Extension(DynamoClient::get_client().await))
+        .layer(Extension(S3Client::get_client().await));
 
     app
 }

@@ -21,6 +21,7 @@ serde = { version="1.0.105", features=["derive"] }
 url = { version = "2", features = ["serde"] }
 aws-config = "0.53.0"
 aws-sdk-dynamodb = "0.23.0"
+aws-sdk-s3 = "0.23.0"
 epoch-timestamp = "1.0.0"
 dotenv = "0.15.0"
 reqwest = { version = "0.11", features = ["json"] }
