@@ -18,7 +18,7 @@ use crate::routes::{auth, redirect, team, user, utils};
 pub(crate) async fn router() -> Router {
     let app = Router::new()
         .route("/", get(index))
-        .route("/health", get(health)) // 배포시 비활성화
+        .route("/health", get(health)) 
         .nest("/utils", utils::router().await)
         .nest("/user", user::router().await)
         .nest("/auth", auth::router().await)
