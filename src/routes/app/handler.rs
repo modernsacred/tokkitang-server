@@ -9,6 +9,7 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
+use tower_http::cors::{Any, CorsLayer};
 
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
@@ -16,9 +17,11 @@ use crate::middlewares::auth_middleware;
 use crate::routes::{auth, redirect, team, user, utils};
 
 pub(crate) async fn router() -> Router {
+    let cors = CorsLayer::new().allow_origin(Any);
+
     let app = Router::new()
         .route("/", get(index))
-        .route("/health", get(health)) 
+        .route("/health", get(health))
         .nest("/utils", utils::router().await)
         .nest("/user", user::router().await)
         .nest("/auth", auth::router().await)
@@ -26,7 +29,8 @@ pub(crate) async fn router() -> Router {
         .nest("/team", team::router().await)
         .route_layer(middleware::from_fn(auth_middleware))
         .layer(Extension(DynamoClient::get_client().await))
-        .layer(Extension(S3Client::get_client().await));
+        .layer(Extension(S3Client::get_client().await))
+        .layer(cors);
 
     app
 }
