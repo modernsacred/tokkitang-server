@@ -20,7 +20,7 @@ pub(crate) async fn router() -> Router {
         .route("/", get(index))
         .route("/health", get(health)) 
         .nest("/api/utils", utils::router().await)
-        .nest("/api//user", user::router().await)
+        .nest("/api/user", user::router().await)
         .nest("/api/auth", auth::router().await)
         .nest("/api/redirect", redirect::router().await)
         .nest("/api/team", team::router().await)
