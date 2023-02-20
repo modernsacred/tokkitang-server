@@ -11,7 +11,6 @@ use axum::{
     routing::get,
     Extension, Json, Router,
 };
-use bytes::Bytes;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
 use tracing::{Level, Span};
 
@@ -21,16 +20,15 @@ use crate::middlewares::auth_middleware;
 use crate::routes::{auth, redirect, team, user, utils};
 
 pub(crate) async fn router() -> Router {
-    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
-
     let trace = TraceLayer::new_for_http()
         .on_request(|request: &Request<Body>, _span: &Span| {
-            tracing::info!("{} {} started", request.method(), request.uri().path())
+            println!("{} {} started", request.method(), request.uri().path());
+            println!("request: {:?}", request);
         })
         .on_response(
             |response: &Response<BoxBody>, latency: Duration, _span: &Span| {
-                println!("response {:?}", response);
-                tracing::info!("response generated in {:?}", latency)
+                println!("response generated in {:?}", latency);
+                println!("response: {:?}", response);
             },
         );
 
