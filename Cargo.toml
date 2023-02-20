@@ -11,7 +11,7 @@ path = "src/main.rs"
 
 [dependencies]
 lambda-web = { version = "0.2.1", features=["hyper"] }
-axum = { version = "0.6.2", features = ["multipart"] }
+axum = { version = "0.6.7", features = ["multipart"] }
 tokio = { version = "1" }
 sha256 = "1.1.1"
 jsonwebtoken = "8.2.0"
@@ -29,6 +29,7 @@ thiserror = "1.0.38"
 tower-http = { version = "0.3.5", features=["cors", "trace"] }
 tracing-subscriber = "0.3.16"
 tracing = "0.1.37"
+bytes = "1.4.0"
 
 # 배포 전용 디펜던시
 [target.'cfg(unix)'.dependencies]

@@ -1,17 +1,19 @@
 use std::sync::Arc;
+use std::time::Duration;
 use std::{collections::HashMap, error::Error};
 
 use aws_sdk_dynamodb::Client;
+use axum::body::{Body, BoxBody};
 use axum::{
-    http::StatusCode,
+    http::{HeaderMap, Request, Response, StatusCode},
     middleware,
     response::{Html, IntoResponse},
     routing::get,
     Extension, Json, Router,
 };
-// use tower_http::cors::{Any, CorsLayer};
+use bytes::Bytes;
 use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
-use tracing::Level;
+use tracing::{Level, Span};
 
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
@@ -21,11 +23,16 @@ use crate::routes::{auth, redirect, team, user, utils};
 pub(crate) async fn router() -> Router {
     tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
-    //let cors = CorsLayer::permissive();
     let trace = TraceLayer::new_for_http()
-        .make_span_with(DefaultMakeSpan::new().include_headers(true))
-        .on_request(DefaultOnRequest::new().level(Level::INFO))
-        .on_response(DefaultOnResponse::new().level(Level::INFO));
+        .on_request(|request: &Request<Body>, _span: &Span| {
+            tracing::info!("{} {} started", request.method(), request.uri().path())
+        })
+        .on_response(
+            |response: &Response<BoxBody>, latency: Duration, _span: &Span| {
+                println!("response {:?}", response);
+                tracing::info!("response generated in {:?}", latency)
+            },
+        );
 
     let app = Router::new()
         .route("/", get(index))
@@ -38,7 +45,6 @@ pub(crate) async fn router() -> Router {
         .route_layer(middleware::from_fn(auth_middleware))
         .layer(Extension(DynamoClient::get_client().await))
         .layer(Extension(S3Client::get_client().await))
-        //.layer(cors)
         .layer(trace);
 
     app
