@@ -10,7 +10,8 @@ use axum::{
     Extension, Json, Router,
 };
 // use tower_http::cors::{Any, CorsLayer};
-use tower_http::trace::TraceLayer;
+use tower_http::trace::{DefaultMakeSpan, DefaultOnRequest, DefaultOnResponse, TraceLayer};
+use tracing::Level;
 
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
@@ -18,12 +19,13 @@ use crate::middlewares::auth_middleware;
 use crate::routes::{auth, redirect, team, user, utils};
 
 pub(crate) async fn router() -> Router {
-    tracing_subscriber::fmt()
-        .with_max_level(tracing::Level::DEBUG)
-        .init();
+    tracing_subscriber::fmt().with_max_level(Level::INFO).init();
 
     //let cors = CorsLayer::permissive();
-    let trace = TraceLayer::new_for_http();
+    let trace = TraceLayer::new_for_http()
+        .make_span_with(DefaultMakeSpan::new().include_headers(true))
+        .on_request(DefaultOnRequest::new().level(Level::INFO))
+        .on_response(DefaultOnResponse::new().level(Level::INFO));
 
     let app = Router::new()
         .route("/", get(index))
