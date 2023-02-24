@@ -125,4 +125,44 @@ impl TeamService {
             }
         }
     }
+
+    pub async fn get_team_user_list_by_team_id(
+        &self,
+        team_id: String,
+    ) -> Result<Vec<TeamUser>, AllError> {
+        let mut list = vec![];
+        let mut last_evaluated_key = None;
+
+        loop {
+            match self
+                .client
+                .scan()
+                .table_name(TeamUser::NAME)
+                .filter_expression("team_id = :team_id")
+                .expression_attribute_values(":team_id", AttributeValue::S(team_id.clone()))
+                .set_exclusive_start_key(last_evaluated_key)
+                .send()
+                .await
+            {
+                Ok(data) => {
+                    if let Some(items) = data.items() {
+                        for item in items {
+                            if let Some(team_user) = TeamUser::from_hashmap(item.to_owned()) {
+                                list.push(team_user);
+                            }
+                        }
+                    }
+
+                    match data.last_evaluated_key() {
+                        None => return Ok(list),
+                        Some(key) => {
+                            last_evaluated_key = Some(key.to_owned());
+                            continue;
+                        }
+                    }
+                }
+                Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            }
+        }
+    }
 }
