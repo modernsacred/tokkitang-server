@@ -20,8 +20,8 @@ use crate::{
 
 use super::{
     dto::{
-        CreateTeamRequest, CreateTeamResponse, GetTeamListItem, GetTeamListResponse,
-        UpdateTeamRequest, UpdateTeamResponse,
+        CreateTeamRequest, CreateTeamResponse, GetTeamItem, GetTeamListItem, GetTeamListResponse,
+        GetTeamResponse, UpdateTeamRequest, UpdateTeamResponse,
     },
     TeamService,
 };
@@ -29,11 +29,44 @@ use super::{
 pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_team))
+        .route("/:team_id", get(get_team))
         .route("/:team_id", put(update_team))
         .route("/:team_id", delete(delete_team))
         .route("/my/list", get(get_my_team_list));
 
     app
+}
+
+async fn get_team(
+    //current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+) -> impl IntoResponse {
+    // let _user = if let Some(user) = current_user.user.clone() {
+    //     user
+    // } else {
+    //     return (StatusCode::UNAUTHORIZED).into_response();
+    // };
+
+    let team_service = TeamService::new(database.clone());
+
+    let team = match team_service.get_team_by_id(team_id).await {
+        Ok(team) => GetTeamItem {
+            id: team.id,
+            name: team.name,
+            description: team.description,
+            owner_id: team.owner_id,
+            thumbnail_url: team.thumbnail_url,
+        },
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let response = GetTeamResponse { data: team };
+
+    Json(response).into_response()
 }
 
 async fn create_team(
