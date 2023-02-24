@@ -5,7 +5,7 @@ use axum::{
     extract::Path,
     http::StatusCode,
     response::{Html, IntoResponse},
-    routing::{get, post},
+    routing::{get, post, put},
     Extension, Json, Router,
 };
 use futures::future::join_all;
@@ -19,13 +19,17 @@ use crate::{
 };
 
 use super::{
-    dto::{CreateTeamRequest, CreateTeamResponse, GetTeamListItem, GetTeamListResponse},
+    dto::{
+        CreateTeamRequest, CreateTeamResponse, GetTeamListItem, GetTeamListResponse,
+        UpdateTeamRequest, UpdateTeamResponse,
+    },
     TeamService,
 };
 
 pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_team))
+        .route("/:team_id", put(update_team))
         .route("/my/list", get(get_my_team_list));
 
     app
@@ -53,7 +57,7 @@ async fn create_team(
         id: uuid::Uuid::new_v4().to_string(),
         name: body.name,
         description: body.description,
-        thumbnail_url: None,
+        thumbnail_url: body.thumbnail_url,
         owner_id: user.id.clone(),
     };
 
@@ -76,6 +80,52 @@ async fn create_team(
 
     match team_service.create_team_user(team_user_data).await {
         Ok(()) => {}
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    Json(response).into_response()
+}
+
+async fn update_team(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<UpdateTeamRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    let mut response = UpdateTeamResponse { success: false };
+
+    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+        Ok(team) => team,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    if old_team.owner_id != user.id {
+        return (StatusCode::FORBIDDEN).into_response();
+    }
+
+    let team_data = Team {
+        id: team_id,
+        name: body.name,
+        description: body.description,
+        thumbnail_url: body.thumbnail_url,
+        owner_id: user.id.clone(),
+    };
+
+    match team_service.create_team(team_data).await {
+        Ok(_) => {
+            response.success = true;
+        }
         Err(error) => {
             println!("error: {:?}", error);
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
