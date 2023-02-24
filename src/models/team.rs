@@ -41,12 +41,12 @@ impl Team {
     }
 
     #[allow(dead_code)]
-    pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
-        let id = hashmap?.get("id")?.as_s().ok()?.to_owned();
-        let name = hashmap?.get("name")?.as_s().ok()?.to_owned();
-        let description = hashmap?.get("description")?.as_s().ok()?.to_owned();
-        let owner_id = hashmap?.get("owner_id")?.as_s().ok()?.to_owned();
-        let thumbnail_url = hashmap?
+    pub fn from_hashmap(hashmap: HashMap<String, AttributeValue>) -> Option<Self> {
+        let id = hashmap.get("id")?.as_s().ok()?.to_owned();
+        let name = hashmap.get("name")?.as_s().ok()?.to_owned();
+        let description = hashmap.get("description")?.as_s().ok()?.to_owned();
+        let owner_id = hashmap.get("owner_id")?.as_s().ok()?.to_owned();
+        let thumbnail_url = hashmap
             .get("thumbnail_url")
             .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
             .flatten();

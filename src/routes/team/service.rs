@@ -50,6 +50,28 @@ impl TeamService {
         }
     }
 
+    pub async fn get_team_by_id(&self, team_id: String) -> Result<Team, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(Team::NAME)
+            .filter_expression("team_id = :team_id")
+            .expression_attribute_values(":team_id", AttributeValue::S(team_id))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| Team::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
+
     pub async fn get_team_user_list_by_user_id(
         &self,
         user_id: String,
