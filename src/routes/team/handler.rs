@@ -225,8 +225,6 @@ async fn get_my_team_list(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
 
-    println!("으악 {:?}", team_user_list);
-
     let team_list = join_all(team_user_list.into_iter().map(|team_user| async {
         let team = match team_service.get_team_by_id(team_user.team_id).await {
             Ok(team) => Some(team),
