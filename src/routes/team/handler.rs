@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use aws_sdk_dynamodb::Client;
 use axum::{
+    extract::Path,
     http::StatusCode,
     response::{Html, IntoResponse},
     routing::{get, post},
@@ -22,7 +23,9 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/", post(create_team));
+    let app = Router::new()
+        .route("/", post(create_team))
+        .route("/my/list", post(create_team));
 
     app
 }
@@ -77,6 +80,31 @@ async fn create_team(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
+
+    Json(response).into_response()
+}
+
+async fn get_my_team_list(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    let team_user_list = match team_service.get_team_user_list_by_user_id(user.id).await {
+        Ok(team_user_list) => team_user_list,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let mut response = CreateTeamResponse {
+        success: false,
+        team_id: "".into(),
+    };
 
     Json(response).into_response()
 }

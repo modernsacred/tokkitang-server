@@ -68,10 +68,10 @@ impl TeamUser {
     }
 
     #[allow(dead_code)]
-    pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
-        let team_id = hashmap?.get("team_id")?.as_s().ok()?.to_owned();
-        let user_id = hashmap?.get("user_id")?.as_s().ok()?.to_owned();
-        let authority = hashmap?.get("authority")?.as_s().ok()?.to_owned();
+    pub fn from_hashmap(hashmap: HashMap<String, AttributeValue>) -> Option<Self> {
+        let team_id = hashmap.get("team_id")?.as_s().ok()?.to_owned();
+        let user_id = hashmap.get("user_id")?.as_s().ok()?.to_owned();
+        let authority = hashmap.get("authority")?.as_s().ok()?.to_owned();
 
         let authority = authority.try_into().ok()?;
 
