@@ -9,6 +9,7 @@ use axum::{
 };
 
 use crate::{
+    extensions::CurrentUser,
     middlewares::auth,
     models::{InsertUser, User},
     routes::auth::AuthService,
@@ -16,14 +17,15 @@ use crate::{
 };
 
 use super::{
-    dto::{SignupGithubRequest, SignupRequest, SignupResponse},
+    dto::{MyInfoResponse, SignupGithubRequest, SignupRequest, SignupResponse},
     UserService,
 };
 
 pub async fn router() -> Router {
     let app = Router::new()
         .route("/signup", post(signup))
-        .route("/signup/github", post(signup_github));
+        .route("/signup/github", post(signup_github))
+        .route("/my/info", get(get_my_info));
 
     app
 }
@@ -146,4 +148,24 @@ async fn signup_github(
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }
+}
+
+async fn get_my_info(
+    current_user: Extension<CurrentUser>,
+    _database: Extension<Arc<Client>>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let response = MyInfoResponse {
+        id: user.id,
+        nickname: user.nickname,
+        email: user.email,
+        thumbnail_url: user.thumbnail_url,
+    };
+
+    Json(response).into_response()
 }
