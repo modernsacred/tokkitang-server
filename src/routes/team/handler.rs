@@ -5,7 +5,7 @@ use axum::{
     extract::Path,
     http::StatusCode,
     response::{Html, IntoResponse},
-    routing::{get, post, put},
+    routing::{delete, get, post, put},
     Extension, Json, Router,
 };
 use futures::future::join_all;
@@ -30,6 +30,7 @@ pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_team))
         .route("/:team_id", put(update_team))
+        .route("/:team_id", delete(delete_team))
         .route("/my/list", get(get_my_team_list));
 
     app
@@ -123,6 +124,43 @@ async fn update_team(
     };
 
     match team_service.create_team(team_data).await {
+        Ok(_) => {
+            response.success = true;
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    Json(response).into_response()
+}
+
+async fn delete_team(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    let mut response = UpdateTeamResponse { success: false };
+
+    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+        Ok(team) => team,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    if old_team.owner_id != user.id {
+        return (StatusCode::FORBIDDEN).into_response();
+    }
+
+    match team_service.delete_team(team_id).await {
         Ok(_) => {
             response.success = true;
         }

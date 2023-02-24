@@ -34,6 +34,20 @@ impl TeamService {
         }
     }
 
+    pub async fn delete_team(&self, team_id: String) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(Team::NAME)
+            .key("id", AttributeValue::S(team_id))
+            .send()
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
+
     pub async fn create_team_user(&self, team_user: TeamUser) -> Result<(), AllError> {
         let input = team_user.to_hashmap();
 
