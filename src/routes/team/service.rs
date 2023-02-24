@@ -55,7 +55,7 @@ impl TeamService {
             .client
             .scan()
             .table_name(Team::NAME)
-            .filter_expression("team_id = :team_id")
+            .filter_expression("id = :team_id")
             .expression_attribute_values(":team_id", AttributeValue::S(team_id))
             .send()
             .await

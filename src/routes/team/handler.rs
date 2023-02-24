@@ -8,6 +8,7 @@ use axum::{
     routing::{get, post},
     Extension, Json, Router,
 };
+use futures::future::join_all;
 
 use crate::{
     extensions::CurrentUser,
@@ -18,14 +19,14 @@ use crate::{
 };
 
 use super::{
-    dto::{CreateTeamRequest, CreateTeamResponse},
+    dto::{CreateTeamRequest, CreateTeamResponse, GetTeamListItem, GetTeamListResponse},
     TeamService,
 };
 
 pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_team))
-        .route("/my/list", post(create_team));
+        .route("/my/list", get(get_my_team_list));
 
     app
 }
@@ -101,10 +102,33 @@ async fn get_my_team_list(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
 
-    let mut response = CreateTeamResponse {
-        success: false,
-        team_id: "".into(),
-    };
+    println!("으악 {:?}", team_user_list);
+
+    let team_list = join_all(team_user_list.into_iter().map(|team_user| async {
+        let team = match team_service.get_team_by_id(team_user.team_id).await {
+            Ok(team) => Some(team),
+            Err(_) => None,
+        };
+
+        team
+    }))
+    .await;
+
+    let team_list = team_list
+        .into_iter()
+        .filter_map(|e| match e {
+            Some(team) => Some(GetTeamListItem {
+                id: team.id,
+                name: team.name,
+                description: team.description,
+                owner_id: team.owner_id,
+                thumbnail_url: team.thumbnail_url,
+            }),
+            None => None,
+        })
+        .collect::<Vec<_>>();
+
+    let response = GetTeamListResponse { list: team_list };
 
     Json(response).into_response()
 }
