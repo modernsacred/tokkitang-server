@@ -43,16 +43,21 @@ pub async fn auth_middleware<B>(
         let user_id = jwt::verify(auth_header.to_owned());
 
         if let Some(user_id) = user_id {
-            println!(">> Authorize Success");
+            println!(">> Authorization: JWT verify success");
             let client = req.extensions().get::<Arc<Client>>().unwrap();
             let user_service = UserService::new(Extension(client.to_owned()));
 
             if let Ok(Some(user)) = user_service.find_by_id(user_id).await {
+                println!(">> Authorization: complete");
                 current_user = CurrentUser {
                     user: Some(user),
                     authorized: true,
                 };
+            } else {
+                println!(">> Authorization: user find failed");
             }
+        } else {
+            println!(">> Authorization: JWT verify failed");
         }
     }
 
