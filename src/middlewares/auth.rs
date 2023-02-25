@@ -39,6 +39,7 @@ pub async fn auth_middleware<B>(
 
     if let Some(auth_header) = auth_header {
         println!(">> Authorization: {}", auth_header);
+        let auth_header = auth_header.replace("Bearer ", "");
 
         let user_id = jwt::verify(auth_header.to_owned());
 
