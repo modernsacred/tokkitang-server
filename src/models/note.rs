@@ -46,16 +46,12 @@ impl Entity {
     }
 
     pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
-        let id = hashmap?.get("id")?.as_s().ok()?.to_owned();
-        let project_id = hashmap?.get("project_id")?.as_s().ok()?.to_owned();
-        let logical_name = hashmap?.get("logical_name")?.as_s().ok()?.to_owned();
-        let physical_name = hashmap?.get("physical_name")?.as_s().ok()?.to_owned();
-        let comment = hashmap?.get("comment")?.as_s().ok()?.to_owned();
-        let columns = hashmap?
-            .get("columns")?
-            .as_s()
-            .ok()
-            .unwrap_or(&"".to_string());
+        let id = hashmap?.get("id")?.as_s().ok()?;
+        let project_id = hashmap?.get("project_id")?.as_s().ok()?;
+        let logical_name = hashmap?.get("logical_name")?.as_s().ok()?;
+        let physical_name = hashmap?.get("physical_name")?.as_s().ok()?;
+        let comment = hashmap?.get("comment")?.as_s().ok()?;
+        let columns = hashmap?.get("columns")?.as_s().ok()?;
         let columns = serde_json::from_str(columns).unwrap_or(vec![]);
 
         Some(Self {
