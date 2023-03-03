@@ -55,8 +55,9 @@ impl Entity {
             .get("columns")?
             .as_s()
             .ok()
-            .unwrap_or(&"".to_string());
-        let columns = serde_json::from_str(columns).unwrap_or(vec![]);
+            .map(|e| e.to_owned())
+            .unwrap_or("".to_string());
+        let columns = serde_json::from_str(columns.as_str()).unwrap_or(vec![]);
 
         Some(Self {
             id,
