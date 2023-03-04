@@ -17,7 +17,7 @@ use tracing::{Level, Span};
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
 use crate::middlewares::auth_middleware;
-use crate::routes::{auth, redirect, team, user, utils};
+use crate::routes::{auth, project, redirect, team, user, utils};
 
 pub(crate) async fn router() -> Router {
     let trace = TraceLayer::new_for_http()
@@ -40,6 +40,7 @@ pub(crate) async fn router() -> Router {
         .nest("/auth", auth::router().await)
         .nest("/redirect", redirect::router().await)
         .nest("/team", team::router().await)
+        .nest("/project", project::router().await)
         .route_layer(middleware::from_fn(auth_middleware))
         .layer(Extension(DynamoClient::get_client().await))
         .layer(Extension(S3Client::get_client().await))
