@@ -13,6 +13,8 @@ pub struct Entity {
     pub physical_name: String,
     pub comment: String,
     pub columns: Vec<Column>,
+    pub x: String,
+    pub y: String,
 }
 
 impl Entity {
@@ -37,6 +39,8 @@ impl Entity {
             "comment".to_string(),
             AttributeValue::S(self.comment.to_owned()),
         );
+        map.insert("x".to_string(), AttributeValue::S(self.x.to_owned()));
+        map.insert("y".to_string(), AttributeValue::S(self.y.to_owned()));
 
         if let Ok(colmns) = serde_json::to_string(&self.columns) {
             map.insert("colmns".to_string(), AttributeValue::S(colmns));
@@ -58,6 +62,8 @@ impl Entity {
             .map(|e| e.to_owned())
             .unwrap_or("".to_string());
         let columns = serde_json::from_str(columns.as_str()).unwrap_or(vec![]);
+        let x = hashmap?.get("x")?.as_s().ok()?.to_owned();
+        let y = hashmap?.get("y")?.as_s().ok()?.to_owned();
 
         Some(Self {
             id,
@@ -66,6 +72,8 @@ impl Entity {
             physical_name,
             comment,
             columns,
+            x,
+            y,
         })
     }
 }
