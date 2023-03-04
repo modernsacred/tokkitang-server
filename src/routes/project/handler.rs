@@ -13,15 +13,84 @@ use futures::future::join_all;
 use crate::{
     extensions::CurrentUser,
     middlewares::auth,
-    models::{InsertUser, Team, TeamUser, TeamUserAuthority, User},
-    routes::{auth::AuthService, user::UserService},
+    models::{InsertUser, Project, Team, TeamUser, TeamUserAuthority, User},
+    routes::{auth::AuthService, team::TeamService, user::UserService},
     utils::{generate_uuid, hash_password},
 };
 
-use super::ProjectService;
+use super::{
+    dto::{CreateProjectRequest, CreateProjectResponse},
+    ProjectService,
+};
 
 pub async fn router() -> Router {
-    let app = Router::new();
+    let app = Router::new().route("/", post(create_project));
 
     app
+}
+
+async fn create_project(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Json(body): Json<CreateProjectRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
+
+    let mut response = CreateProjectResponse {
+        success: false,
+        project_id: "".into(),
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(user.id.clone(), body.team_id.clone())
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            TeamUserAuthority::Owner | TeamUserAuthority::Admin => {
+                println!("# 권한 허용: OWNER OR ADMIN");
+            }
+            _ => {
+                println!("# 권한 부족: NOT OWNER OR ADMIN");
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => {
+            println!("# 권한 부족: NOT TEAM MEMBER");
+            return (StatusCode::FORBIDDEN).into_response();
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    let data = Project {
+        id: uuid::Uuid::new_v4().to_string(),
+        name: body.name,
+        description: body.description,
+        thumbnail_url: body.thumbnail_url,
+        team_id: body.team_id,
+        x: body.x,
+        y: body.y,
+    };
+
+    match project_service.create_project(data).await {
+        Ok(project_id) => {
+            response.project_id = project_id;
+            response.success = true;
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    Json(response).into_response()
 }
