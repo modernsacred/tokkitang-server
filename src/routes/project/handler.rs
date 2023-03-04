@@ -20,7 +20,8 @@ use crate::{
 
 use super::{
     dto::{
-        CreateProjectRequest, CreateProjectResponse, UpdateProjectRequest, UpdateProjectResponse,
+        CreateProjectRequest, CreateProjectResponse, GetProjectItem, GetProjectResponse,
+        UpdateProjectRequest, UpdateProjectResponse,
     },
     ProjectService,
 };
@@ -29,7 +30,8 @@ pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_project))
         .route("/:project_id", put(update_project))
-        .route("/:project_id", delete(delete_project));
+        .route("/:project_id", delete(delete_project))
+        .route("/:project_id", get(get_project));
 
     app
 }
@@ -82,8 +84,6 @@ async fn create_project(
         description: body.description,
         thumbnail_url: body.thumbnail_url,
         team_id: body.team_id,
-        x: body.x,
-        y: body.y,
     };
 
     match project_service.create_project(data).await {
@@ -151,8 +151,6 @@ async fn update_project(
         description: body.description,
         thumbnail_url: body.thumbnail_url,
         team_id: old_team.team_id,
-        x: body.x,
-        y: body.y,
     };
 
     match project_service.create_project(data).await {
@@ -221,6 +219,54 @@ async fn delete_project(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
+
+    Json(response).into_response()
+}
+
+async fn get_project(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(project_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let project_service = ProjectService::new(database.clone());
+    let team_service = TeamService::new(database.clone());
+
+    let (project_data, team_id) = match project_service.get_project_by_id(project_id).await {
+        Ok(project) => (
+            GetProjectItem {
+                id: project.id,
+                name: project.name,
+                description: project.description,
+                thumbnail_url: project.thumbnail_url,
+            },
+            project.team_id,
+        ),
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(user.id.clone(), team_id)
+        .await
+    {
+        Ok(_) => {
+            println!("# 권한 허용");
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    let response = GetProjectResponse { data: project_data };
 
     Json(response).into_response()
 }

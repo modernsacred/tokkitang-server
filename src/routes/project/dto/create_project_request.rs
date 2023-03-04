@@ -6,6 +6,4 @@ pub struct CreateProjectRequest {
     pub name: String,
     pub description: String,
     pub thumbnail_url: Option<String>,
-    pub x: String,
-    pub y: String,
 }
