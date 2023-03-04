@@ -12,3 +12,6 @@ pub use entity::*;
 
 pub mod note;
 pub use note::*;
+
+pub mod project;
+pub use project::*;
