@@ -55,4 +55,18 @@ impl ProjectService {
             Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
+
+    pub async fn delete_project(&self, project_id: String) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(Project::NAME)
+            .key("id", AttributeValue::S(project_id))
+            .send()
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }
