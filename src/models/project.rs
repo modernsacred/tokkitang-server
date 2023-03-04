@@ -12,8 +12,6 @@ pub struct Project {
     pub description: String,
     pub name: String,
     pub thumbnail_url: Option<String>,
-    pub x: String,
-    pub y: String,
 }
 
 impl Project {
@@ -31,8 +29,6 @@ impl Project {
             "team_id".to_string(),
             AttributeValue::S(self.team_id.to_owned()),
         );
-        map.insert("x".to_string(), AttributeValue::S(self.x.to_owned()));
-        map.insert("y".to_string(), AttributeValue::S(self.y.to_owned()));
 
         if let Some(thumbnail_url) = self.thumbnail_url.clone() {
             map.insert(
@@ -50,8 +46,7 @@ impl Project {
         let name = hashmap.get("name")?.as_s().ok()?.to_owned();
         let description = hashmap.get("description")?.as_s().ok()?.to_owned();
         let team_id = hashmap.get("team_id")?.as_s().ok()?.to_owned();
-        let x = hashmap.get("x")?.as_s().ok()?.to_owned();
-        let y = hashmap.get("y")?.as_s().ok()?.to_owned();
+
         let thumbnail_url = hashmap
             .get("thumbnail_url")
             .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
@@ -63,8 +58,6 @@ impl Project {
             description,
             team_id,
             thumbnail_url,
-            x,
-            y,
         })
     }
 }

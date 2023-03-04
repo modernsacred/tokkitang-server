@@ -165,4 +165,34 @@ impl TeamService {
             }
         }
     }
+
+    pub async fn find_team_user_by_team_and_user_id(
+        &self,
+        team_id: String,
+        user_id: String,
+    ) -> Result<Option<TeamUser>, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(TeamUser::NAME)
+            .filter_expression("team_id = :team_id AND user_id = :user_id")
+            .expression_attribute_values(":team_id", AttributeValue::S(team_id.clone()))
+            .expression_attribute_values(":user_id", AttributeValue::S(user_id.clone()))
+            .send()
+            .await
+        {
+            Ok(data) => {
+                if let Some(items) = data.items() {
+                    if items.is_empty() {
+                        Ok(None)
+                    } else {
+                        Ok(TeamUser::from_hashmap(items.first().unwrap().to_owned()))
+                    }
+                } else {
+                    Ok(None)
+                }
+            }
+            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }
