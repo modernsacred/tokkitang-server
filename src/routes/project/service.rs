@@ -33,4 +33,26 @@ impl ProjectService {
             Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
+
+    pub async fn get_project_by_id(&self, project_id: String) -> Result<Project, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(Project::NAME)
+            .filter_expression("id = :project_id")
+            .expression_attribute_values(":project_id", AttributeValue::S(project_id))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| Project::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }
