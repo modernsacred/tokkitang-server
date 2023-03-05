@@ -27,13 +27,11 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_note))
         .route("/:note_id", put(update_note))
         .route("/:note_id", delete(delete_note))
-        .route("/:note_id", get(get_note));
-
-    app
+        .route("/:note_id", get(get_note))
 }
 
 async fn create_note(
@@ -66,7 +64,7 @@ async fn create_note(
                 println!("# 프로젝트 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -92,7 +90,7 @@ async fn create_note(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -111,7 +109,7 @@ async fn create_note(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -140,7 +138,7 @@ async fn update_note(
     let project_id = match note_service.get_note_by_id(note_id.clone()).await {
         Ok(note) => note.project_id,
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
@@ -152,7 +150,7 @@ async fn update_note(
                 println!("# 프로젝트 없음");
                 return (StatusCode::FORBIDDEN).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -176,14 +174,14 @@ async fn update_note(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
 
     let data = Note {
         id: note_id,
-        project_id: project_id,
+        project_id,
         content: body.content.clone(),
         x: body.x,
         y: body.y,
@@ -194,7 +192,7 @@ async fn update_note(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -247,7 +245,7 @@ async fn delete_note(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -257,7 +255,7 @@ async fn delete_note(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -295,7 +293,7 @@ async fn get_note(
                 println!("# 프로젝트 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -308,7 +306,7 @@ async fn get_note(
                 println!("# 프로젝트 없음");
                 return (StatusCode::FORBIDDEN).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -322,7 +320,7 @@ async fn get_note(
             println!("# 권한 허용");
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }

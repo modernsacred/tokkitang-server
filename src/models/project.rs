@@ -49,11 +49,10 @@ impl Project {
 
         let thumbnail_url = hashmap
             .get("thumbnail_url")
-            .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
-            .flatten();
+            .and_then(|e| e.as_s().ok().map(|e| e.to_owned()));
 
         Some(Self {
-            id: id.to_owned(),
+            id,
             name,
             description,
             team_id,

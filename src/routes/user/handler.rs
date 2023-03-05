@@ -22,12 +22,10 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/signup", post(signup))
         .route("/signup/github", post(signup_github))
-        .route("/my/info", get(get_my_info));
-
-    app
+        .route("/my/info", get(get_my_info))
 }
 
 async fn signup(
@@ -42,7 +40,7 @@ async fn signup(
         success: false,
     };
 
-    match service.exists_email(body.email.clone()).await {
+    match service.exists_email(&body.email).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
@@ -51,7 +49,7 @@ async fn signup(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -60,7 +58,7 @@ async fn signup(
     let nickname = body.nickname;
     let original_password = body.password;
     let password_salt = generate_uuid();
-    let hashed_password = hash_password(original_password, &password_salt);
+    let hashed_password = hash_password(&original_password, &password_salt);
 
     let user_data = User {
         id: uuid::Uuid::new_v4().to_string(),
@@ -81,7 +79,7 @@ async fn signup(
             Json(response).into_response()
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }
@@ -99,7 +97,7 @@ async fn signup_github(
         success: false,
     };
 
-    match service.exists_email(body.email.clone()).await {
+    match service.exists_email(&body.email).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
@@ -108,16 +106,16 @@ async fn signup_github(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
 
     let email = body.email;
     let nickname = body.nickname;
-    let original_password = "github signup".into();
+    let original_password = "github signup".to_string();
     let password_salt = generate_uuid();
-    let hashed_password = hash_password(original_password, &password_salt);
+    let hashed_password = hash_password(&original_password, &password_salt);
 
     let github_user = auth_service.get_github_user(body.access_token).await;
 
@@ -144,7 +142,7 @@ async fn signup_github(
             Json(response).into_response()
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }

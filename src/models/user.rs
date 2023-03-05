@@ -47,10 +47,7 @@ impl User {
         }
 
         if let Some(github_id) = self.github_id.clone() {
-            map.insert(
-                "github_id".to_string(),
-                AttributeValue::S(github_id.to_owned()),
-            );
+            map.insert("github_id".to_string(), AttributeValue::S(github_id));
         }
 
         Some(map)
@@ -64,12 +61,10 @@ impl User {
         let password_salt = hashmap?.get("password_salt")?.as_s().ok()?;
         let github_id = hashmap?
             .get("github_id")
-            .map(|e| e.as_s().ok().map(|e| e.to_owned()))
-            .flatten();
+            .and_then(|e| e.as_s().ok().map(|e| e.to_owned()));
         let thumbnail_url = hashmap?
             .get("thumbnail_url")
-            .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
-            .flatten();
+            .and_then(|e| e.as_s().ok().map(|e| e.to_owned()));
 
         Some(User {
             id: id.to_owned(),

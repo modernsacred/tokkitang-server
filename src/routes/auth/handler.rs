@@ -23,12 +23,10 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/login", post(login))
         .route("/login/github", post(login_github))
-        .route("/access-token/github", post(get_github_access_token));
-
-    app
+        .route("/access-token/github", post(get_github_access_token))
 }
 
 async fn login(
@@ -51,7 +49,7 @@ async fn login(
             if let Some(user) = user {
                 let salt = user.password_salt;
 
-                let hashed_password = hash_password(password, &salt);
+                let hashed_password = hash_password(&password, salt);
 
                 if hashed_password == user.password {
                     response.success = true;
@@ -66,7 +64,7 @@ async fn login(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }
@@ -81,7 +79,7 @@ async fn login_github(
     let auth_service = AuthService::new(client.clone());
     let user_service = UserService::new(client);
 
-    let github_user = auth_service.get_github_user(body.access_token).await;
+    let github_user = auth_service.get_github_user(&body.access_token).await;
 
     let github_user = match github_user {
         Some(github_user) => github_user,
@@ -123,8 +121,8 @@ async fn login_github(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            println!("error: {error:?}");
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
 }
@@ -136,7 +134,7 @@ async fn get_github_access_token(
     let _user_service = UserService::new(database.clone());
     let auth_service = AuthService::new(database);
 
-    let access_token = auth_service.get_github_access_token(body.code).await;
+    let access_token = auth_service.get_github_access_token(&body.code).await;
 
     match access_token {
         Some(access_token) => {

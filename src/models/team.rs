@@ -48,11 +48,10 @@ impl Team {
         let owner_id = hashmap.get("owner_id")?.as_s().ok()?.to_owned();
         let thumbnail_url = hashmap
             .get("thumbnail_url")
-            .map(|e| e.as_s().ok().map(|e| e.to_owned()).to_owned())
-            .flatten();
+            .and_then(|e| e.as_s().ok().map(|e| e.to_owned()));
 
         Some(Team {
-            id: id.to_owned(),
+            id,
             name,
             description,
             owner_id,

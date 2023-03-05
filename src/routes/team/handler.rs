@@ -35,16 +35,14 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_team))
         .route("/:team_id", get(get_team))
         .route("/:team_id", put(update_team))
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
         .route("/:team_id/project/list", get(get_team_project_list))
-        .route("/my/list", get(get_my_team_list));
-
-    app
+        .route("/my/list", get(get_my_team_list))
 }
 
 async fn get_team(
@@ -60,7 +58,7 @@ async fn get_team(
 
     let team_service = TeamService::new(database.clone());
 
-    let team = match team_service.get_team_by_id(team_id).await {
+    let team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => GetTeamItem {
             id: team.id,
             name: team.name,
@@ -69,7 +67,7 @@ async fn get_team(
             thumbnail_url: team.thumbnail_url,
         },
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
@@ -111,7 +109,7 @@ async fn create_team(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -125,7 +123,7 @@ async fn create_team(
     match team_service.create_team_user(team_user_data).await {
         Ok(()) => {}
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -149,7 +147,7 @@ async fn update_team(
 
     let mut response = UpdateTeamResponse { success: false };
 
-    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+    let old_team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => team,
         Err(_) => return (StatusCode::NOT_FOUND).into_response(),
     };
@@ -171,7 +169,7 @@ async fn update_team(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -194,7 +192,7 @@ async fn delete_team(
 
     let mut response = UpdateTeamResponse { success: false };
 
-    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+    let old_team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => team,
         Err(_) => return (StatusCode::NOT_FOUND).into_response(),
     };
@@ -203,12 +201,12 @@ async fn delete_team(
         return (StatusCode::FORBIDDEN).into_response();
     }
 
-    match team_service.delete_team(team_id).await {
+    match team_service.delete_team(&team_id).await {
         Ok(_) => {
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -228,18 +226,16 @@ async fn get_my_team_list(
 
     let team_service = TeamService::new(database.clone());
 
-    let team_user_list = match team_service.get_team_user_list_by_user_id(user.id).await {
+    let team_user_list = match team_service.get_team_user_list_by_user_id(&user.id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
 
     let team_list = join_all(team_user_list.into_iter().map(|team_user| async {
-        let team = match team_service.get_team_by_id(team_user.team_id).await {
+        match team_service.get_team_by_id(team_user.team_id).await {
             Ok(team) => Some(team),
             Err(_) => None,
-        };
-
-        team
+        }
     }))
     .await;
 
@@ -276,13 +272,13 @@ async fn get_team_user_list(
     let user_service = UserService::new(database.clone());
     let team_service = TeamService::new(database.clone());
 
-    let team_user_list = match team_service.get_team_user_list_by_team_id(team_id).await {
+    let team_user_list = match team_service.get_team_user_list_by_team_id(&team_id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
 
     let user_list = join_all(team_user_list.into_iter().map(|team_user| async {
-        let user = match user_service.find_by_id(team_user.user_id).await {
+        match user_service.find_by_id(team_user.user_id).await {
             Ok(Some(user)) => Some(GetTeamUserListItem {
                 id: user.id,
                 nickname: user.nickname,
@@ -291,13 +287,11 @@ async fn get_team_user_list(
                 authority: team_user.authority,
             }),
             _ => None,
-        };
-
-        user
+        }
     }))
     .await;
 
-    let user_list = user_list.into_iter().filter_map(|e| e).collect::<Vec<_>>();
+    let user_list = user_list.into_iter().flatten().collect::<Vec<_>>();
 
     let response = GetTeamUserListResponse { list: user_list };
 
@@ -319,7 +313,7 @@ async fn get_team_project_list(
     let project_service = ProjectService::new(database.clone());
 
     match team_service
-        .find_team_user_by_team_and_user_id(team_id.clone(), user.id)
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
         .await
     {
         Ok(Some(_)) => {}
@@ -327,7 +321,7 @@ async fn get_team_project_list(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 
-    let project_list = match project_service.get_project_list_by_team_id(team_id).await {
+    let project_list = match project_service.get_project_list_by_team_id(&team_id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };

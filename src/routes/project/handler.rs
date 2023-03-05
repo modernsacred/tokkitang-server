@@ -27,13 +27,11 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_project))
         .route("/:project_id", put(update_project))
         .route("/:project_id", delete(delete_project))
-        .route("/:project_id", get(get_project));
-
-    app
+        .route("/:project_id", get(get_project))
 }
 
 async fn create_project(
@@ -73,7 +71,7 @@ async fn create_project(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -92,7 +90,7 @@ async fn create_project(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -140,7 +138,7 @@ async fn update_project(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -158,7 +156,7 @@ async fn update_project(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -205,7 +203,7 @@ async fn delete_project(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -215,7 +213,7 @@ async fn delete_project(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -248,7 +246,7 @@ async fn get_project(
             project.team_id,
         ),
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
@@ -261,7 +259,7 @@ async fn get_project(
             println!("# 권한 허용");
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }

@@ -30,7 +30,7 @@ impl ProjectService {
             .await
         {
             Ok(_) => Ok(data.id),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -55,30 +55,32 @@ impl ProjectService {
                         .and_then(|item| Project::from_hashmap(item.to_owned()))
                 })
                 .ok_or(AllError::NotFound),
-            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
-    pub async fn delete_project(&self, project_id: String) -> Result<(), AllError> {
+    pub async fn delete_project(&self, project_id: impl Into<String>) -> Result<(), AllError> {
         match self
             .client
             .delete_item()
             .table_name(Project::NAME)
-            .key("id", AttributeValue::S(project_id))
+            .key("id", AttributeValue::S(project_id.into()))
             .send()
             .await
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
     pub async fn get_project_list_by_team_id(
         &self,
-        team_id: String,
+        team_id: impl Into<String>,
     ) -> Result<Vec<Project>, AllError> {
         let mut list = vec![];
         let mut last_evaluated_key = None;
+
+        let team_id = team_id.into();
 
         loop {
             match self
@@ -108,7 +110,7 @@ impl ProjectService {
                         }
                     }
                 }
-                Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+                Err(error) => return Err(AllError::AWSError(format!("{error:?}"))),
             }
         }
     }

@@ -22,13 +22,13 @@ impl AuthService {
         Self { _client: client }
     }
 
-    pub fn get_access_token(&self, user_id: String) -> String {
+    pub fn get_access_token(&self, user_id: impl Into<String>) -> String {
         let epoch = (Epoch::now() + Epoch::day(1)) as usize;
 
-        jwt::sign(epoch, user_id)
+        jwt::sign(epoch, user_id.into())
     }
 
-    pub async fn get_github_access_token(&self, code: String) -> Option<String> {
+    pub async fn get_github_access_token(&self, code: impl Into<String>) -> Option<String> {
         let headers = http::default_header();
 
         let client_secret = std::env::var("GITHUB_SECRET").unwrap();
@@ -44,7 +44,7 @@ impl AuthService {
         let body = GetAccessTokenRequestBody {
             client_secret,
             client_id,
-            code,
+            code: code.into(),
         };
 
         let body = serde_json::to_string(&body).unwrap();
@@ -74,9 +74,12 @@ impl AuthService {
         Some(result.access_token)
     }
 
-    pub async fn get_github_user(&self, access_token: String) -> Option<GithubUserResponse> {
+    pub async fn get_github_user(
+        &self,
+        access_token: impl Into<String>,
+    ) -> Option<GithubUserResponse> {
         let mut headers = http::default_header();
-        let bearer = format!("Bearer {}", access_token);
+        let bearer = format!("Bearer {}", access_token.into());
         headers.insert(
             "Authorization",
             header::HeaderValue::from_str(bearer.as_str()).unwrap(),

@@ -30,7 +30,7 @@ impl NoteService {
             .await
         {
             Ok(_) => Ok(data.id),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -52,7 +52,7 @@ impl NoteService {
                         .and_then(|item| Note::from_hashmap(item.to_owned()))
                 })
                 .ok_or(AllError::NotFound),
-            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -66,7 +66,7 @@ impl NoteService {
             .await
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 }
