@@ -14,7 +14,14 @@ use crate::{
     extensions::CurrentUser,
     middlewares::auth,
     models::{InsertUser, Team, TeamUser, TeamUserAuthority, User},
-    routes::{auth::AuthService, user::UserService},
+    routes::{
+        auth::AuthService,
+        project::{
+            dto::{GetProjectListItem, GetProjectListResponse},
+            ProjectService,
+        },
+        user::UserService,
+    },
     utils::{generate_uuid, hash_password},
 };
 
@@ -298,43 +305,44 @@ async fn get_team_user_list(
 }
 
 async fn get_team_project_list(
-    //current_user: Extension<CurrentUser>,
+    current_user: Extension<CurrentUser>,
     database: Extension<Arc<Client>>,
     Path(team_id): Path<String>,
 ) -> impl IntoResponse {
-    // let user = if let Some(user) = current_user.user.clone() {
-    //     user
-    // } else {
-    //     return (StatusCode::UNAUTHORIZED).into_response();
-    // };
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
 
-    let user_service = UserService::new(database.clone());
     let team_service = TeamService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
 
-    let team_user_list = match team_service.get_team_user_list_by_team_id(team_id).await {
+    match team_service
+        .find_team_user_by_team_and_user_id(team_id.clone(), user.id)
+        .await
+    {
+        Ok(Some(_)) => {}
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+
+    let project_list = match project_service.get_project_list_by_team_id(team_id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
 
-    let user_list = join_all(team_user_list.into_iter().map(|team_user| async {
-        let user = match user_service.find_by_id(team_user.user_id).await {
-            Ok(Some(user)) => Some(GetTeamUserListItem {
-                id: user.id,
-                nickname: user.nickname,
-                email: user.email,
-                thumbnail_url: user.thumbnail_url,
-                authority: team_user.authority,
-            }),
-            _ => None,
-        };
+    let project_list = project_list
+        .into_iter()
+        .map(|e| GetProjectListItem {
+            id: e.id,
+            name: e.name,
+            description: e.description,
+            thumbnail_url: e.thumbnail_url,
+        })
+        .collect::<Vec<_>>();
 
-        user
-    }))
-    .await;
-
-    let user_list = user_list.into_iter().filter_map(|e| e).collect::<Vec<_>>();
-
-    let response = GetTeamUserListResponse { list: user_list };
+    let response = GetProjectListResponse { list: project_list };
 
     Json(response).into_response()
 }
