@@ -168,16 +168,16 @@ impl TeamService {
 
     pub async fn find_team_user_by_team_and_user_id(
         &self,
-        team_id: String,
-        user_id: String,
+        team_id: impl Into<String>,
+        user_id: impl Into<String>,
     ) -> Result<Option<TeamUser>, AllError> {
         match self
             .client
             .scan()
             .table_name(TeamUser::NAME)
             .filter_expression("team_id = :team_id AND user_id = :user_id")
-            .expression_attribute_values(":team_id", AttributeValue::S(team_id.clone()))
-            .expression_attribute_values(":user_id", AttributeValue::S(user_id.clone()))
+            .expression_attribute_values(":team_id", AttributeValue::S(team_id.into()))
+            .expression_attribute_values(":user_id", AttributeValue::S(user_id.into()))
             .send()
             .await
         {

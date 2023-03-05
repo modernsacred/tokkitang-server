@@ -34,13 +34,13 @@ impl NoteService {
         }
     }
 
-    pub async fn get_note_by_id(&self, note_id: String) -> Result<Note, AllError> {
+    pub async fn get_note_by_id(&self, note_id: impl Into<String>) -> Result<Note, AllError> {
         match self
             .client
             .scan()
             .table_name(Note::NAME)
             .filter_expression("id = :note_id")
-            .expression_attribute_values(":note_id", AttributeValue::S(note_id))
+            .expression_attribute_values(":note_id", AttributeValue::S(note_id.into()))
             .send()
             .await
         {
@@ -53,6 +53,20 @@ impl NoteService {
                 })
                 .ok_or(AllError::NotFound),
             Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
+
+    pub async fn delete_note(&self, note_id: impl Into<String>) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(Note::NAME)
+            .key("id", AttributeValue::S(note_id.into()))
+            .send()
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
 }
