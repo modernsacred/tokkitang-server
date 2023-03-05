@@ -13,15 +13,104 @@ use futures::future::join_all;
 use crate::{
     extensions::CurrentUser,
     middlewares::auth,
-    models::{project, InsertUser, Note, Project, Team, TeamUser, TeamUserAuthority, User},
+    models::{project, Entity, InsertUser, Note, Project, Team, TeamUser, TeamUserAuthority, User},
     routes::{auth::AuthService, project::ProjectService, team::TeamService, user::UserService},
     utils::{generate_uuid, hash_password, AllError},
 };
 
-use super::EntityService;
+use super::{
+    dto::{CreateEntityRequest, CreateEntityResponse},
+    EntityService,
+};
 
 pub async fn router() -> Router {
-    let app = Router::new();
+    let app = Router::new().route("/", post(create_entity));
 
     app
+}
+
+async fn create_entity(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Json(body): Json<CreateEntityRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+    let entity_service = EntityService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
+
+    let mut response = CreateEntityResponse {
+        success: false,
+        entity_id: "".into(),
+    };
+
+    let project = match project_service
+        .get_project_by_id(body.project_id.clone())
+        .await
+    {
+        Ok(project) => project,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# 프로젝트 없음");
+                return (StatusCode::NOT_FOUND).into_response();
+            } else {
+                println!("error: {:?}", error);
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+
+    let team_id = project.team_id.clone();
+
+    match team_service
+        .find_team_user_by_team_and_user_id(team_id.clone(), user.id.clone())
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            TeamUserAuthority::Owner | TeamUserAuthority::Admin | TeamUserAuthority::Write => {
+                println!("# 권한 허용: OWNER OR ADMIN OR WRITE");
+            }
+            _ => {
+                println!("# 권한 부족: NEED WRITE");
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => {
+            println!("# 권한 부족: NOT TEAM MEMBER");
+            return (StatusCode::FORBIDDEN).into_response();
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    let data = Entity {
+        id: uuid::Uuid::new_v4().to_string(),
+        project_id: body.project_id,
+        physical_name: body.physical_name,
+        logical_name: body.logical_name,
+        comment: body.comment,
+        columns: body.columns,
+        x: body.x,
+        y: body.y,
+    };
+
+    match entity_service.create_entity(data).await {
+        Ok(entity_id) => {
+            response.entity_id = entity_id;
+            response.success = true;
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    Json(response).into_response()
 }
