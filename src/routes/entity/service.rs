@@ -33,4 +33,26 @@ impl EntityService {
             Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
+
+    pub async fn get_entity_by_id(&self, entity_id: impl Into<String>) -> Result<Entity, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(Entity::NAME)
+            .filter_expression("id = :entity_id")
+            .expression_attribute_values(":entity_id", AttributeValue::S(entity_id.into()))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| Entity::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }

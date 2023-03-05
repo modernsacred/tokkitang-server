@@ -43,27 +43,27 @@ impl Entity {
         map.insert("y".to_string(), AttributeValue::S(self.y.to_owned()));
 
         if let Ok(colmns) = serde_json::to_string(&self.columns) {
-            map.insert("colmns".to_string(), AttributeValue::S(colmns));
+            map.insert("columns".to_string(), AttributeValue::S(colmns));
         }
 
         Some(map)
     }
 
-    pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
-        let id = hashmap?.get("id")?.as_s().ok()?.to_owned();
-        let project_id = hashmap?.get("project_id")?.as_s().ok()?.to_owned();
-        let logical_name = hashmap?.get("logical_name")?.as_s().ok()?.to_owned();
-        let physical_name = hashmap?.get("physical_name")?.as_s().ok()?.to_owned();
-        let comment = hashmap?.get("comment")?.as_s().ok()?.to_owned();
-        let columns = hashmap?
+    pub fn from_hashmap(hashmap: HashMap<String, AttributeValue>) -> Option<Self> {
+        let id = hashmap.get("id")?.as_s().ok()?.to_owned();
+        let project_id = hashmap.get("project_id")?.as_s().ok()?.to_owned();
+        let logical_name = hashmap.get("logical_name")?.as_s().ok()?.to_owned();
+        let physical_name = hashmap.get("physical_name")?.as_s().ok()?.to_owned();
+        let comment = hashmap.get("comment")?.as_s().ok()?.to_owned();
+        let columns = hashmap
             .get("columns")?
             .as_s()
             .ok()
             .map(|e| e.to_owned())
             .unwrap_or("".to_string());
         let columns = serde_json::from_str(columns.as_str()).unwrap_or(vec![]);
-        let x = hashmap?.get("x")?.as_s().ok()?.to_owned();
-        let y = hashmap?.get("y")?.as_s().ok()?.to_owned();
+        let x = hashmap.get("x")?.as_s().ok()?.to_owned();
+        let y = hashmap.get("y")?.as_s().ok()?.to_owned();
 
         Some(Self {
             id,
