@@ -19,12 +19,14 @@ use crate::{
 };
 
 use super::{
-    dto::{CreateNoteRequest, CreateNoteResponse},
+    dto::{CreateNoteRequest, CreateNoteResponse, GetNoteItem, GetNoteResponse},
     NoteService,
 };
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/", post(create_note));
+    let app = Router::new()
+        .route("/", post(create_note))
+        .route("/:note_id", get(get_note));
 
     app
 }
@@ -108,6 +110,68 @@ async fn create_note(
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
+
+    Json(response).into_response()
+}
+
+async fn get_note(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(note_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let project_service = ProjectService::new(database.clone());
+    let note_service = NoteService::new(database.clone());
+    let team_service = TeamService::new(database.clone());
+
+    let (note_data, project_id) = match note_service.get_note_by_id(note_id).await {
+        Ok(note) => (
+            GetNoteItem {
+                id: note.id,
+                content: note.content,
+                x: note.x,
+                y: note.y,
+            },
+            note.project_id,
+        ),
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let team_id = match project_service.get_project_by_id(project_id).await {
+        Ok(project) => project.team_id,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# 프로젝트 없음");
+                return (StatusCode::FORBIDDEN).into_response();
+            } else {
+                println!("error: {:?}", error);
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(team_id, user.id)
+        .await
+    {
+        Ok(_) => {
+            println!("# 권한 허용");
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    let response = GetNoteResponse { data: note_data };
 
     Json(response).into_response()
 }

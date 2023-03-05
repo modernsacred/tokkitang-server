@@ -33,4 +33,26 @@ impl NoteService {
             Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
+
+    pub async fn get_note_by_id(&self, note_id: String) -> Result<Note, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(Note::NAME)
+            .filter_expression("id = :note_id")
+            .expression_attribute_values(":note_id", AttributeValue::S(note_id))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| Note::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }

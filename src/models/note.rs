@@ -34,12 +34,12 @@ impl Note {
         Some(map)
     }
 
-    pub fn from_hashmap(hashmap: Option<&HashMap<String, AttributeValue>>) -> Option<Self> {
-        let id = hashmap?.get("id")?.as_s().ok()?.to_owned();
-        let project_id = hashmap?.get("project_id")?.as_s().ok()?.to_owned();
-        let content = hashmap?.get("content")?.as_s().ok()?.to_owned();
-        let x = hashmap?.get("x")?.as_s().ok()?.to_owned();
-        let y = hashmap?.get("y")?.as_s().ok()?.to_owned();
+    pub fn from_hashmap(hashmap: HashMap<String, AttributeValue>) -> Option<Self> {
+        let id = hashmap.get("id")?.as_s().ok()?.to_owned();
+        let project_id = hashmap.get("project_id")?.as_s().ok()?.to_owned();
+        let content = hashmap.get("content")?.as_s().ok()?.to_owned();
+        let x = hashmap.get("x")?.as_s().ok()?.to_owned();
+        let y = hashmap.get("y")?.as_s().ok()?.to_owned();
 
         Some(Self {
             id,
