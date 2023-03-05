@@ -55,4 +55,18 @@ impl EntityService {
             Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
         }
     }
+
+    pub async fn delete_entity(&self, entity_id: impl Into<String>) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(Entity::NAME)
+            .key("id", AttributeValue::S(entity_id.into()))
+            .send()
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+        }
+    }
 }

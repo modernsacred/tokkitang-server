@@ -30,7 +30,8 @@ pub async fn router() -> Router {
     let app = Router::new()
         .route("/", post(create_entity))
         .route("/:entity_id", put(update_entity))
-        .route("/:entity_id", get(get_entity));
+        .route("/:entity_id", get(get_entity))
+        .route("/:entity_id", delete(delete_entity));
 
     app
 }
@@ -204,6 +205,69 @@ async fn update_entity(
     };
 
     match entity_service.create_entity(data).await {
+        Ok(_) => {
+            response.success = true;
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    Json(response).into_response()
+}
+
+async fn delete_entity(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(entity_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+    let entity_service = EntityService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
+
+    let mut response = UpdateEntityResponse { success: false };
+
+    let entity = match entity_service.get_entity_by_id(&entity_id).await {
+        Ok(entity) => entity,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    let project = match project_service.get_project_by_id(&entity.project_id).await {
+        Ok(project) => project,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&project.team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            TeamUserAuthority::Owner | TeamUserAuthority::Admin | TeamUserAuthority::Write => {
+                println!("# 권한 허용: OWNER OR ADMIN OR WRITE");
+            }
+            _ => {
+                println!("# 권한 부족: NEED WRITE");
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => {
+            println!("# 권한 부족: NOT TEAM MEMBER");
+            return (StatusCode::FORBIDDEN).into_response();
+        }
+        Err(error) => {
+            println!("error: {:?}", error);
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    match entity_service.delete_entity(&entity_id).await {
         Ok(_) => {
             response.success = true;
         }
