@@ -34,12 +34,12 @@ impl TeamService {
         }
     }
 
-    pub async fn delete_team(&self, team_id: String) -> Result<(), AllError> {
+    pub async fn delete_team(&self, team_id: impl Into<String>) -> Result<(), AllError> {
         match self
             .client
             .delete_item()
             .table_name(Team::NAME)
-            .key("id", AttributeValue::S(team_id))
+            .key("id", AttributeValue::S(team_id.into()))
             .send()
             .await
         {
@@ -64,13 +64,13 @@ impl TeamService {
         }
     }
 
-    pub async fn get_team_by_id(&self, team_id: String) -> Result<Team, AllError> {
+    pub async fn get_team_by_id(&self, team_id: impl Into<String>) -> Result<Team, AllError> {
         match self
             .client
             .scan()
             .table_name(Team::NAME)
             .filter_expression("id = :team_id")
-            .expression_attribute_values(":team_id", AttributeValue::S(team_id))
+            .expression_attribute_values(":team_id", AttributeValue::S(team_id.into()))
             .send()
             .await
         {
@@ -88,10 +88,12 @@ impl TeamService {
 
     pub async fn get_team_user_list_by_user_id(
         &self,
-        user_id: String,
+        user_id: impl Into<String>,
     ) -> Result<Vec<TeamUser>, AllError> {
         let mut list = vec![];
         let mut last_evaluated_key = None;
+
+        let user_id = user_id.into();
 
         loop {
             match self
@@ -128,10 +130,12 @@ impl TeamService {
 
     pub async fn get_team_user_list_by_team_id(
         &self,
-        team_id: String,
+        team_id: impl Into<String>,
     ) -> Result<Vec<TeamUser>, AllError> {
         let mut list = vec![];
         let mut last_evaluated_key = None;
+
+        let team_id = team_id.into();
 
         loop {
             match self

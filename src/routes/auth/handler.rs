@@ -51,13 +51,13 @@ async fn login(
             if let Some(user) = user {
                 let salt = user.password_salt;
 
-                let hashed_password = hash_password(password, &salt);
+                let hashed_password = hash_password(&password, &salt);
 
                 if hashed_password == user.password {
                     response.success = true;
 
                     let user_id = user.id;
-                    let access_token = auth_service.get_access_token(user_id);
+                    let access_token = auth_service.get_access_token(&user_id);
 
                     response.access_token = access_token;
                 }
@@ -81,7 +81,7 @@ async fn login_github(
     let auth_service = AuthService::new(client.clone());
     let user_service = UserService::new(client);
 
-    let github_user = auth_service.get_github_user(body.access_token).await;
+    let github_user = auth_service.get_github_user(&body.access_token).await;
 
     let github_user = match github_user {
         Some(github_user) => github_user,
@@ -103,7 +103,7 @@ async fn login_github(
         Ok(user) => {
             if let Some(user) = user {
                 let user_id = user.id;
-                let access_token = auth_service.get_access_token(user_id);
+                let access_token = auth_service.get_access_token(&user_id);
 
                 let response = GithubLoginResponse {
                     success: true,
@@ -136,7 +136,7 @@ async fn get_github_access_token(
     let _user_service = UserService::new(database.clone());
     let auth_service = AuthService::new(database);
 
-    let access_token = auth_service.get_github_access_token(body.code).await;
+    let access_token = auth_service.get_github_access_token(&body.code).await;
 
     match access_token {
         Some(access_token) => {

@@ -60,7 +60,7 @@ async fn get_team(
 
     let team_service = TeamService::new(database.clone());
 
-    let team = match team_service.get_team_by_id(team_id).await {
+    let team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => GetTeamItem {
             id: team.id,
             name: team.name,
@@ -149,7 +149,7 @@ async fn update_team(
 
     let mut response = UpdateTeamResponse { success: false };
 
-    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+    let old_team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => team,
         Err(_) => return (StatusCode::NOT_FOUND).into_response(),
     };
@@ -194,7 +194,7 @@ async fn delete_team(
 
     let mut response = UpdateTeamResponse { success: false };
 
-    let old_team = match team_service.get_team_by_id(team_id.clone()).await {
+    let old_team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => team,
         Err(_) => return (StatusCode::NOT_FOUND).into_response(),
     };
@@ -203,7 +203,7 @@ async fn delete_team(
         return (StatusCode::FORBIDDEN).into_response();
     }
 
-    match team_service.delete_team(team_id).await {
+    match team_service.delete_team(&team_id).await {
         Ok(_) => {
             response.success = true;
         }
@@ -228,7 +228,7 @@ async fn get_my_team_list(
 
     let team_service = TeamService::new(database.clone());
 
-    let team_user_list = match team_service.get_team_user_list_by_user_id(user.id).await {
+    let team_user_list = match team_service.get_team_user_list_by_user_id(&user.id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
@@ -276,7 +276,7 @@ async fn get_team_user_list(
     let user_service = UserService::new(database.clone());
     let team_service = TeamService::new(database.clone());
 
-    let team_user_list = match team_service.get_team_user_list_by_team_id(team_id).await {
+    let team_user_list = match team_service.get_team_user_list_by_team_id(&team_id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };
@@ -319,7 +319,7 @@ async fn get_team_project_list(
     let project_service = ProjectService::new(database.clone());
 
     match team_service
-        .find_team_user_by_team_and_user_id(team_id.clone(), user.id)
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
         .await
     {
         Ok(Some(_)) => {}
@@ -327,7 +327,7 @@ async fn get_team_project_list(
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     }
 
-    let project_list = match project_service.get_project_list_by_team_id(team_id).await {
+    let project_list = match project_service.get_project_list_by_team_id(&team_id).await {
         Ok(team_user_list) => team_user_list,
         Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
     };

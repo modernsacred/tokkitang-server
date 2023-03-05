@@ -59,12 +59,12 @@ impl ProjectService {
         }
     }
 
-    pub async fn delete_project(&self, project_id: String) -> Result<(), AllError> {
+    pub async fn delete_project(&self, project_id: impl Into<String>) -> Result<(), AllError> {
         match self
             .client
             .delete_item()
             .table_name(Project::NAME)
-            .key("id", AttributeValue::S(project_id))
+            .key("id", AttributeValue::S(project_id.into()))
             .send()
             .await
         {
@@ -75,10 +75,12 @@ impl ProjectService {
 
     pub async fn get_project_list_by_team_id(
         &self,
-        team_id: String,
+        team_id: impl Into<String>,
     ) -> Result<Vec<Project>, AllError> {
         let mut list = vec![];
         let mut last_evaluated_key = None;
+
+        let team_id = team_id.into();
 
         loop {
             match self

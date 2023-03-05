@@ -42,7 +42,7 @@ async fn signup(
         success: false,
     };
 
-    match service.exists_email(body.email.clone()).await {
+    match service.exists_email(&body.email).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
@@ -60,7 +60,7 @@ async fn signup(
     let nickname = body.nickname;
     let original_password = body.password;
     let password_salt = generate_uuid();
-    let hashed_password = hash_password(original_password, &password_salt);
+    let hashed_password = hash_password(&original_password, &password_salt);
 
     let user_data = User {
         id: uuid::Uuid::new_v4().to_string(),
@@ -74,7 +74,7 @@ async fn signup(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            let access_token = auth_service.get_access_token(user_id);
+            let access_token = auth_service.get_access_token(&user_id);
 
             response.access_token = access_token;
             response.success = true;
@@ -99,7 +99,7 @@ async fn signup_github(
         success: false,
     };
 
-    match service.exists_email(body.email.clone()).await {
+    match service.exists_email(&body.email).await {
         Ok(exists) => {
             if exists {
                 response.email_duplicate = true;
@@ -115,9 +115,9 @@ async fn signup_github(
 
     let email = body.email;
     let nickname = body.nickname;
-    let original_password = "github signup".into();
+    let original_password = "github signup".to_string();
     let password_salt = generate_uuid();
-    let hashed_password = hash_password(original_password, &password_salt);
+    let hashed_password = hash_password(&original_password, &password_salt);
 
     let github_user = auth_service.get_github_user(body.access_token).await;
 
@@ -140,7 +140,7 @@ async fn signup_github(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            response.access_token = auth_service.get_access_token(user_id);
+            response.access_token = auth_service.get_access_token(&user_id);
             Json(response).into_response()
         }
         Err(error) => {

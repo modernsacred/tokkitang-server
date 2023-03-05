@@ -15,26 +15,29 @@ impl UserService {
         Self { client }
     }
 
-    pub async fn exists_email(&self, email: String) -> Result<bool, Box<dyn Error>> {
+    pub async fn exists_email(&self, email: impl Into<String>) -> Result<bool, Box<dyn Error>> {
         let result = self
             .client
             .scan()
             .table_name(User::NAME)
             .filter_expression("email = :email")
-            .expression_attribute_values(":email", AttributeValue::S(email))
+            .expression_attribute_values(":email", AttributeValue::S(email.into()))
             .send()
             .await?;
 
         Ok(result.items().map(|e| e.len()).unwrap_or(0) > 0)
     }
 
-    pub async fn find_by_email(&self, email: String) -> Result<Option<User>, Box<dyn Error>> {
+    pub async fn find_by_email(
+        &self,
+        email: impl Into<String>,
+    ) -> Result<Option<User>, Box<dyn Error>> {
         let scan_result = self
             .client
             .scan()
             .table_name(User::NAME)
             .filter_expression("email = :email")
-            .expression_attribute_values(":email", AttributeValue::S(email))
+            .expression_attribute_values(":email", AttributeValue::S(email.into()))
             .send()
             .await?;
 
@@ -48,14 +51,14 @@ impl UserService {
 
     pub async fn find_by_github_id(
         &self,
-        github_id: String,
+        github_id: impl Into<String>,
     ) -> Result<Option<User>, Box<dyn Error>> {
         let scan_result = self
             .client
             .scan()
             .table_name(User::NAME)
             .filter_expression("github_id = :github_id")
-            .expression_attribute_values(":github_id", AttributeValue::S(github_id))
+            .expression_attribute_values(":github_id", AttributeValue::S(github_id.into()))
             .send()
             .await?;
 
@@ -67,12 +70,15 @@ impl UserService {
         }
     }
 
-    pub async fn find_by_id(&self, user_id: String) -> Result<Option<User>, Box<dyn Error>> {
+    pub async fn find_by_id(
+        &self,
+        user_id: impl Into<String>,
+    ) -> Result<Option<User>, Box<dyn Error>> {
         let user = self
             .client
             .get_item()
             .table_name(User::NAME)
-            .key("id", AttributeValue::S(user_id))
+            .key("id", AttributeValue::S(user_id.into()))
             .send()
             .await?;
 
@@ -89,21 +95,6 @@ impl UserService {
             .set_item(input)
             .send()
             .await?;
-
-        // let index_email = IndexEmailForUser {
-        //     email: user_data.email,
-        //     user_id: user_data.id.clone(),
-        // };
-
-        // let input = index_email.to_hashmap();
-
-        // let _email_index = self
-        //     .client
-        //     .put_item()
-        //     .table_name(IndexEmailForUser::NAME)
-        //     .set_item(input)
-        //     .send()
-        //     .await?;
 
         Ok(user_data.id)
     }
