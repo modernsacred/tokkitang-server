@@ -66,7 +66,7 @@ async fn login(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }
@@ -123,7 +123,7 @@ async fn login_github(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return StatusCode::INTERNAL_SERVER_ERROR.into_response();
         }
     }

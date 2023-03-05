@@ -19,9 +19,7 @@ use crate::{
 use super::{dto::UploadImageResponse, UtilService};
 
 pub async fn router() -> Router {
-    let app = Router::new().route("/image/upload/user-thumbnail", post(upload_user_thumbnail));
-
-    app
+    Router::new().route("/image/upload/user-thumbnail", post(upload_user_thumbnail))
 }
 
 async fn upload_user_thumbnail(

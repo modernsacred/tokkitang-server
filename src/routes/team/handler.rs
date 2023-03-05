@@ -69,7 +69,7 @@ async fn get_team(
             thumbnail_url: team.thumbnail_url,
         },
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     };
@@ -111,7 +111,7 @@ async fn create_team(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -125,7 +125,7 @@ async fn create_team(
     match team_service.create_team_user(team_user_data).await {
         Ok(()) => {}
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -171,7 +171,7 @@ async fn update_team(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -208,7 +208,7 @@ async fn delete_team(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }

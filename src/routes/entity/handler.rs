@@ -66,7 +66,7 @@ async fn create_entity(
                 println!("# 프로젝트 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -92,7 +92,7 @@ async fn create_entity(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -114,7 +114,7 @@ async fn create_entity(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -147,7 +147,7 @@ async fn update_entity(
                 println!("# 엔티티 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -162,7 +162,7 @@ async fn update_entity(
                 println!("# 프로젝트 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -188,7 +188,7 @@ async fn update_entity(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -209,7 +209,7 @@ async fn update_entity(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -262,7 +262,7 @@ async fn delete_entity(
             return (StatusCode::FORBIDDEN).into_response();
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -272,7 +272,7 @@ async fn delete_entity(
             response.success = true;
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -315,7 +315,7 @@ async fn get_entity(
                 println!("# 엔티티 없음");
                 return (StatusCode::NOT_FOUND).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -328,7 +328,7 @@ async fn get_entity(
                 println!("# 프로젝트 없음");
                 return (StatusCode::FORBIDDEN).into_response();
             } else {
-                println!("error: {:?}", error);
+                println!("error: {error:?}");
                 return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
             }
         }
@@ -342,7 +342,7 @@ async fn get_entity(
             println!("# 권한 허용");
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }

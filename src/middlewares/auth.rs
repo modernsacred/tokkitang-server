@@ -27,8 +27,8 @@ pub async fn auth_middleware<B>(
         parsed_url.map(|e| {
             e.query_pairs()
                 .into_owned()
-                .find(|(key, _)| key.to_owned() == "AUTHORIZATION")
-                .map(|(_, value)| value.to_owned())
+                .find(|(key, _)| *key == "AUTHORIZATION")
+                .map(|(_, value)| value)
         })
     }
     .flatten();
@@ -38,7 +38,7 @@ pub async fn auth_middleware<B>(
     let mut current_user = CurrentUser::default();
 
     if let Some(auth_header) = auth_header {
-        println!(">> Authorization: {}", auth_header);
+        println!(">> Authorization: {auth_header}");
         let auth_header = auth_header.replace("Bearer ", "");
 
         let user_id = jwt::verify(auth_header.to_owned());

@@ -51,7 +51,7 @@ async fn signup(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -81,7 +81,7 @@ async fn signup(
             Json(response).into_response()
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }
@@ -108,7 +108,7 @@ async fn signup_github(
             }
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
         }
     }
@@ -144,7 +144,7 @@ async fn signup_github(
             Json(response).into_response()
         }
         Err(error) => {
-            println!("error: {:?}", error);
+            println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
         }
     }
