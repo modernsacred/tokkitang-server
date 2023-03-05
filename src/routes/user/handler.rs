@@ -22,12 +22,10 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/signup", post(signup))
         .route("/signup/github", post(signup_github))
-        .route("/my/info", get(get_my_info));
-
-    app
+        .route("/my/info", get(get_my_info))
 }
 
 async fn signup(
@@ -74,7 +72,7 @@ async fn signup(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            let access_token = auth_service.get_access_token(&user_id);
+            let access_token = auth_service.get_access_token(user_id);
 
             response.access_token = access_token;
             response.success = true;
@@ -140,7 +138,7 @@ async fn signup_github(
 
     match service.create_user(user_data).await {
         Ok(user_id) => {
-            response.access_token = auth_service.get_access_token(&user_id);
+            response.access_token = auth_service.get_access_token(user_id);
             Json(response).into_response()
         }
         Err(error) => {

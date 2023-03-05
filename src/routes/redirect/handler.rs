@@ -21,9 +21,7 @@ use crate::{
 use super::dto::GithubRedirectCodeRequest;
 
 pub(crate) async fn router() -> Router {
-    let app = Router::new().route("/github", get(get_github_code));
-
-    app
+    Router::new().route("/github", get(get_github_code))
 }
 
 async fn get_github_code(Query(query): Query<GithubRedirectCodeRequest>) -> impl IntoResponse {

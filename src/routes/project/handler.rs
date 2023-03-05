@@ -27,13 +27,11 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_project))
         .route("/:project_id", put(update_project))
         .route("/:project_id", delete(delete_project))
-        .route("/:project_id", get(get_project));
-
-    app
+        .route("/:project_id", get(get_project))
 }
 
 async fn create_project(

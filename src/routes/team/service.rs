@@ -30,7 +30,7 @@ impl TeamService {
             .await
         {
             Ok(_) => Ok(team_data.id),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -44,7 +44,7 @@ impl TeamService {
             .await
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -60,7 +60,7 @@ impl TeamService {
             .await
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -82,7 +82,7 @@ impl TeamService {
                         .and_then(|item| Team::from_hashmap(item.to_owned()))
                 })
                 .ok_or(AllError::NotFound),
-            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -123,7 +123,7 @@ impl TeamService {
                         }
                     }
                 }
-                Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+                Err(error) => return Err(AllError::AWSError(format!("{error:?}"))),
             }
         }
     }
@@ -165,7 +165,7 @@ impl TeamService {
                         }
                     }
                 }
-                Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+                Err(error) => return Err(AllError::AWSError(format!("{error:?}"))),
             }
         }
     }
@@ -196,7 +196,7 @@ impl TeamService {
                     Ok(None)
                 }
             }
-            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 }

@@ -30,7 +30,7 @@ impl ProjectService {
             .await
         {
             Ok(_) => Ok(data.id),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -55,7 +55,7 @@ impl ProjectService {
                         .and_then(|item| Project::from_hashmap(item.to_owned()))
                 })
                 .ok_or(AllError::NotFound),
-            Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -69,7 +69,7 @@ impl ProjectService {
             .await
         {
             Ok(_) => Ok(()),
-            Err(error) => Err(AllError::AWSError(format!("{:?}", error))),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
 
@@ -110,7 +110,7 @@ impl ProjectService {
                         }
                     }
                 }
-                Err(error) => return Err(AllError::AWSError(format!("{:?}", error))),
+                Err(error) => return Err(AllError::AWSError(format!("{error:?}"))),
             }
         }
     }

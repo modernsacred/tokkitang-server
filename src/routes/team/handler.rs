@@ -35,16 +35,14 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_team))
         .route("/:team_id", get(get_team))
         .route("/:team_id", put(update_team))
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
         .route("/:team_id/project/list", get(get_team_project_list))
-        .route("/my/list", get(get_my_team_list));
-
-    app
+        .route("/my/list", get(get_my_team_list))
 }
 
 async fn get_team(
@@ -234,12 +232,10 @@ async fn get_my_team_list(
     };
 
     let team_list = join_all(team_user_list.into_iter().map(|team_user| async {
-        let team = match team_service.get_team_by_id(team_user.team_id).await {
+        match team_service.get_team_by_id(team_user.team_id).await {
             Ok(team) => Some(team),
             Err(_) => None,
-        };
-
-        team
+        }
     }))
     .await;
 
@@ -282,7 +278,7 @@ async fn get_team_user_list(
     };
 
     let user_list = join_all(team_user_list.into_iter().map(|team_user| async {
-        let user = match user_service.find_by_id(team_user.user_id).await {
+        match user_service.find_by_id(team_user.user_id).await {
             Ok(Some(user)) => Some(GetTeamUserListItem {
                 id: user.id,
                 nickname: user.nickname,
@@ -291,13 +287,11 @@ async fn get_team_user_list(
                 authority: team_user.authority,
             }),
             _ => None,
-        };
-
-        user
+        }
     }))
     .await;
 
-    let user_list = user_list.into_iter().filter_map(|e| e).collect::<Vec<_>>();
+    let user_list = user_list.into_iter().flatten().collect::<Vec<_>>();
 
     let response = GetTeamUserListResponse { list: user_list };
 

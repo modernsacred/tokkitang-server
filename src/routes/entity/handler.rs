@@ -295,8 +295,6 @@ async fn get_entity(
     let entity_service = EntityService::new(database.clone());
     let team_service = TeamService::new(database.clone());
 
-    println!("?? {}", entity_id);
-
     let (entity_data, project_id) = match entity_service.get_entity_by_id(entity_id).await {
         Ok(entity) => (
             GetEntityItem {
