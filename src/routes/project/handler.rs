@@ -56,7 +56,7 @@ async fn create_project(
     };
 
     match team_service
-        .find_team_user_by_team_and_user_id(user.id.clone(), body.team_id.clone())
+        .find_team_user_by_team_and_user_id(body.team_id.clone(), user.id.clone())
         .await
     {
         Ok(Some(team_user)) => match team_user.authority {
@@ -123,7 +123,7 @@ async fn update_project(
     };
 
     match team_service
-        .find_team_user_by_team_and_user_id(user.id.clone(), old_team.team_id.clone())
+        .find_team_user_by_team_and_user_id(old_team.team_id.clone(), user.id.clone())
         .await
     {
         Ok(Some(team_user)) => match team_user.authority {
@@ -188,7 +188,7 @@ async fn delete_project(
     };
 
     match team_service
-        .find_team_user_by_team_and_user_id(user.id.clone(), old_team.team_id.clone())
+        .find_team_user_by_team_and_user_id(old_team.team_id.clone(), user.id.clone())
         .await
     {
         Ok(Some(team_user)) => match team_user.authority {
