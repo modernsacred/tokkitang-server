@@ -27,13 +27,11 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/", post(create_entity))
         .route("/:entity_id", put(update_entity))
         .route("/:entity_id", get(get_entity))
-        .route("/:entity_id", delete(delete_entity));
-
-    app
+        .route("/:entity_id", delete(delete_entity))
 }
 
 async fn create_entity(

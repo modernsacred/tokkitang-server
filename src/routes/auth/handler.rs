@@ -23,12 +23,10 @@ use super::{
 };
 
 pub async fn router() -> Router {
-    let app = Router::new()
+    Router::new()
         .route("/login", post(login))
         .route("/login/github", post(login_github))
-        .route("/access-token/github", post(get_github_access_token));
-
-    app
+        .route("/access-token/github", post(get_github_access_token))
 }
 
 async fn login(
@@ -51,13 +49,13 @@ async fn login(
             if let Some(user) = user {
                 let salt = user.password_salt;
 
-                let hashed_password = hash_password(&password, &salt);
+                let hashed_password = hash_password(&password, salt);
 
                 if hashed_password == user.password {
                     response.success = true;
 
                     let user_id = user.id;
-                    let access_token = auth_service.get_access_token(&user_id);
+                    let access_token = auth_service.get_access_token(user_id);
 
                     response.access_token = access_token;
                 }
@@ -103,7 +101,7 @@ async fn login_github(
         Ok(user) => {
             if let Some(user) = user {
                 let user_id = user.id;
-                let access_token = auth_service.get_access_token(&user_id);
+                let access_token = auth_service.get_access_token(user_id);
 
                 let response = GithubLoginResponse {
                     success: true,
@@ -124,7 +122,7 @@ async fn login_github(
         }
         Err(error) => {
             println!("error: {error:?}");
-            return StatusCode::INTERNAL_SERVER_ERROR.into_response();
+            StatusCode::INTERNAL_SERVER_ERROR.into_response()
         }
     }
 }
