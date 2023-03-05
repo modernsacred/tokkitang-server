@@ -34,13 +34,16 @@ impl ProjectService {
         }
     }
 
-    pub async fn get_project_by_id(&self, project_id: String) -> Result<Project, AllError> {
+    pub async fn get_project_by_id(
+        &self,
+        project_id: impl Into<String>,
+    ) -> Result<Project, AllError> {
         match self
             .client
             .scan()
             .table_name(Project::NAME)
             .filter_expression("id = :project_id")
-            .expression_attribute_values(":project_id", AttributeValue::S(project_id))
+            .expression_attribute_values(":project_id", AttributeValue::S(project_id.into()))
             .send()
             .await
         {
