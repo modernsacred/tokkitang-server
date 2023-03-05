@@ -1,5 +1,6 @@
 pub mod app;
 pub mod auth;
+pub mod entity;
 pub mod note;
 pub mod project;
 pub mod redirect;
