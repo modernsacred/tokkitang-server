@@ -69,4 +69,46 @@ impl NoteService {
             Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
+
+    pub async fn get_note_list_by_project_id(
+        &self,
+        project_id: impl Into<String>,
+    ) -> Result<Vec<Note>, AllError> {
+        let mut list = vec![];
+        let mut last_evaluated_key = None;
+
+        let project_id = project_id.into();
+
+        loop {
+            match self
+                .client
+                .scan()
+                .table_name(Note::NAME)
+                .filter_expression("project_id = :project_id")
+                .expression_attribute_values(":project_id", AttributeValue::S(project_id.clone()))
+                .set_exclusive_start_key(last_evaluated_key)
+                .send()
+                .await
+            {
+                Ok(data) => {
+                    if let Some(items) = data.items() {
+                        for item in items {
+                            if let Some(team_user) = Note::from_hashmap(item.to_owned()) {
+                                list.push(team_user);
+                            }
+                        }
+                    }
+
+                    match data.last_evaluated_key() {
+                        None => return Ok(list),
+                        Some(key) => {
+                            last_evaluated_key = Some(key.to_owned());
+                            continue;
+                        }
+                    }
+                }
+                Err(error) => return Err(AllError::AWSError(format!("{error:?}"))),
+            }
+        }
+    }
 }
