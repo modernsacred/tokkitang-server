@@ -14,13 +14,17 @@ use crate::{
     extensions::CurrentUser,
     middlewares::auth,
     models::{InsertUser, Project, Team, TeamUser, TeamUserAuthority, User},
-    routes::{auth::AuthService, team::TeamService, user::UserService},
+    routes::{
+        auth::AuthService, entity::EntityService, note::NoteService, team::TeamService,
+        user::UserService,
+    },
     utils::{generate_uuid, hash_password},
 };
 
 use super::{
     dto::{
-        CreateProjectRequest, CreateProjectResponse, GetProjectItem, GetProjectResponse,
+        CreateProjectRequest, CreateProjectResponse, GetEntityListItem, GetEntityListResponse,
+        GetNoteListItem, GetNoteListResponse, GetProjectItem, GetProjectResponse,
         UpdateProjectRequest, UpdateProjectResponse,
     },
     ProjectService,
@@ -32,6 +36,8 @@ pub async fn router() -> Router {
         .route("/:project_id", put(update_project))
         .route("/:project_id", delete(delete_project))
         .route("/:project_id", get(get_project))
+        .route("/:project_id/entity/list", get(get_entity_list))
+        .route("/:project_id/note/list", get(get_note_list))
 }
 
 async fn create_project(
@@ -265,6 +271,110 @@ async fn get_project(
     }
 
     let response = GetProjectResponse { data: project_data };
+
+    Json(response).into_response()
+}
+
+async fn get_entity_list(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(project_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let entity_service = EntityService::new(database.clone());
+    let team_service = TeamService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
+
+    let team_id = match project_service.get_project_by_id(&project_id).await {
+        Ok(project) => project.team_id,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(_)) => {}
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+
+    let entity_list = match entity_service
+        .get_entity_list_by_project_id(&project_id)
+        .await
+    {
+        Ok(entity_list) => entity_list,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let entity_list = entity_list
+        .into_iter()
+        .map(|e| GetEntityListItem {
+            id: e.id,
+            logical_name: e.logical_name,
+            physical_name: e.physical_name,
+            comment: e.comment,
+            columns: e.columns,
+            x: e.x,
+            y: e.y,
+        })
+        .collect::<Vec<_>>();
+
+    let response = GetEntityListResponse { list: entity_list };
+
+    Json(response).into_response()
+}
+
+async fn get_note_list(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(project_id): Path<String>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let note_service = NoteService::new(database.clone());
+    let team_service = TeamService::new(database.clone());
+    let project_service = ProjectService::new(database.clone());
+
+    let team_id = match project_service.get_project_by_id(&project_id).await {
+        Ok(project) => project.team_id,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(_)) => {}
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+
+    let note_list = match note_service.get_note_list_by_project_id(&project_id).await {
+        Ok(note_list) => note_list,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let note_list = note_list
+        .into_iter()
+        .map(|e| GetNoteListItem {
+            id: e.id,
+            content: e.content,
+            x: e.x,
+            y: e.y,
+        })
+        .collect::<Vec<_>>();
+
+    let response = GetNoteListResponse { list: note_list };
 
     Json(response).into_response()
 }

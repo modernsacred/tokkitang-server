@@ -1,18 +1,14 @@
 use serde::{Deserialize, Serialize};
 
-use crate::models::TeamUserAuthority;
-
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetTeamItem {
+pub struct GetProjectListItem {
     pub id: String,
     pub name: String,
     pub description: String,
-    pub owner_id: String,
     pub thumbnail_url: Option<String>,
-    pub authority: TeamUserAuthority,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
-pub struct GetTeamResponse {
-    pub data: GetTeamItem,
+pub struct GetProjectListResponse {
+    pub list: Vec<GetProjectListItem>,
 }
