@@ -46,17 +46,30 @@ pub async fn router() -> Router {
 }
 
 async fn get_team(
-    //current_user: Extension<CurrentUser>,
+    current_user: Extension<CurrentUser>,
     database: Extension<Arc<Client>>,
     Path(team_id): Path<String>,
 ) -> impl IntoResponse {
-    // let _user = if let Some(user) = current_user.user.clone() {
-    //     user
-    // } else {
-    //     return (StatusCode::UNAUTHORIZED).into_response();
-    // };
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
 
     let team_service = TeamService::new(database.clone());
+    let team_user = match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => team_user,
+        Ok(None) => {
+            return (StatusCode::FORBIDDEN).into_response();
+        }
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
 
     let team = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => GetTeamItem {
@@ -65,6 +78,7 @@ async fn get_team(
             description: team.description,
             owner_id: team.owner_id,
             thumbnail_url: team.thumbnail_url,
+            authority: team_user.authority,
         },
         Err(error) => {
             println!("error: {error:?}");
