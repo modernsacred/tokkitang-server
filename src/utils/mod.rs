@@ -11,3 +11,6 @@ pub mod http;
 
 pub mod error;
 pub use error::*;
+
+pub mod email;
+pub use email::*;
