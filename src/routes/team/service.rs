@@ -240,4 +240,21 @@ impl TeamService {
             Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
+
+    pub async fn delete_team_invite_by_code(
+        &self,
+        code: impl Into<String>,
+    ) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(TeamInvite::NAME)
+            .key("code", AttributeValue::S(code.into()))
+            .send()
+            .await
+        {
+            Ok(_data) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
 }

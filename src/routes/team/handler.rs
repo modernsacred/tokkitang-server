@@ -5,7 +5,7 @@ use aws_sdk_dynamodb::Client;
 use axum::{
     extract::Path,
     http::StatusCode,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect},
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
@@ -449,7 +449,7 @@ async fn invite_user(
 
     let nickname = user_to_invite.nickname;
     let host = "http://localhost:8080";
-    let invite_url = format!("{host}/team/{team_id}/invite/{code}",);
+    let invite_url = format!("{host}/team/{team_id}/user/invite/{code}/join",);
     let content = format!(
         r#"안녕하세요 {nickname}님, {team_name}팀에 초대합니다!<br> 초대 링크: <a href="{invite_url}">{invite_url}</a>"#
     );
@@ -468,14 +468,16 @@ async fn invite_user(
 
 async fn join_team(
     database: Extension<Arc<Client>>,
-    Path(team_id): Path<String>,
-    Path(code): Path<String>,
+    Path((team_id, code)): Path<(String, String)>,
 ) -> impl IntoResponse {
     let team_service = TeamService::new(database.clone());
 
     let invite = match team_service.get_team_invite_by_code(&code).await {
         Ok(invite) => invite,
-        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+        Err(_) => {
+            println!("# Invite Not Found");
+            return (StatusCode::NOT_FOUND).into_response();
+        }
     };
 
     if invite.team_id != team_id {
@@ -489,7 +491,15 @@ async fn join_team(
     };
 
     match team_service.create_team_user(team_user_data).await {
-        Ok(()) => (StatusCode::OK).into_response(),
+        Ok(()) => {
+            if let Err(error) = team_service.delete_team_invite_by_code(&code).await {
+                println!("# Invite Delete Error: {error:?}");
+            }
+
+            let url = format!("https://tokkitang.com");
+
+            Redirect::permanent(url.as_str()).into_response()
+        }
         Err(error) => {
             println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
