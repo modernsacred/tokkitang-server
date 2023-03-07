@@ -448,7 +448,7 @@ async fn invite_user(
     let title = format!("[{team_name}]팀에 초대합니다!");
 
     let nickname = user_to_invite.nickname;
-    let host = "http://localhost:8080";
+    let host = "https://ksauqt5f5er2djql3atquzas4e0ofpla.lambda-url.ap-northeast-2.on.aws";
     let invite_url = format!("{host}/team/{team_id}/user/invite/{code}/join",);
     let content = format!(
         r#"안녕하세요 {nickname}님, {team_name}팀에 초대합니다!<br> 초대 링크: <a href="{invite_url}">{invite_url}</a>"#
