@@ -413,6 +413,11 @@ async fn invite_user(
         }
     };
 
+    if user_to_invite.id == user.id {
+        println!("# User is same");
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
     let team_to_invite = match team_service.get_team_by_id(&team_id).await {
         Ok(team) => team,
         Err(error) => {
