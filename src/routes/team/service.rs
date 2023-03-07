@@ -215,4 +215,29 @@ impl TeamService {
             Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }
+
+    pub async fn get_team_invite_by_code(
+        &self,
+        code: impl Into<String>,
+    ) -> Result<TeamInvite, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(TeamInvite::NAME)
+            .filter_expression("code = :code")
+            .expression_attribute_values(":code", AttributeValue::S(code.into()))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| TeamInvite::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
 }

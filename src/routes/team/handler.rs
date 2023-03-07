@@ -43,6 +43,7 @@ pub async fn router() -> Router {
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
         .route("/:team_id/user/invite", post(invite_user))
+        .route("/:team_id/user/invite/:code", get(join_team))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }
@@ -456,5 +457,36 @@ async fn invite_user(
     {
         Ok(_) => (StatusCode::OK).into_response(),
         Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+}
+
+async fn join_team(
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Path(code): Path<String>,
+) -> impl IntoResponse {
+    let team_service = TeamService::new(database.clone());
+
+    let invite = match team_service.get_team_invite_by_code(&code).await {
+        Ok(invite) => invite,
+        Err(_) => return (StatusCode::NOT_FOUND).into_response(),
+    };
+
+    if invite.team_id != team_id {
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
+    let team_user_data = TeamUser {
+        team_id: invite.team_id,
+        user_id: invite.user_id,
+        authority: invite.authority,
+    };
+
+    match team_service.create_team_user(team_user_data).await {
+        Ok(()) => (StatusCode::OK).into_response(),
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
     }
 }
