@@ -31,7 +31,7 @@ use super::{
     dto::{
         CreateTeamRequest, CreateTeamResponse, GetTeamItem, GetTeamListItem, GetTeamListResponse,
         GetTeamResponse, GetTeamUserListItem, GetTeamUserListResponse, InviteUserToTeamRequest,
-        UpdateTeamRequest, UpdateTeamResponse,
+        TransferOwnershipRequest, UpdateTeamRequest, UpdateTeamResponse,
     },
     TeamService,
 };
@@ -45,6 +45,7 @@ pub async fn router() -> Router {
         .route("/:team_id/user/list", get(get_team_user_list))
         .route("/:team_id/user/invite", post(invite_user))
         .route("/:team_id/user/invite/:code/join", get(join_team))
+        .route("/:team_id/ownership/transfer", post(transfer_ownership))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }
@@ -500,6 +501,89 @@ async fn join_team(
 
             Redirect::permanent(url.as_str()).into_response()
         }
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
+}
+
+async fn transfer_ownership(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<TransferOwnershipRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    let mut team = match team_service.get_team_by_id(&team_id).await {
+        Ok(team) => team,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# Team Not Found");
+                return (StatusCode::NOT_FOUND).into_response();
+            } else {
+                println!("# Team Found Error: {error:?}");
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner만 사용가능
+            TeamUserAuthority::Owner => {}
+            _ => {
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    match team_service
+        .create_team_user(TeamUser {
+            team_id: team_id.clone(),
+            user_id: user.id,
+            authority: TeamUserAuthority::Admin,
+        })
+        .await
+    {
+        Ok(()) => {}
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    match team_service
+        .create_team_user(TeamUser {
+            team_id: team_id.clone(),
+            user_id: body.user_id.clone(),
+            authority: TeamUserAuthority::Owner,
+        })
+        .await
+    {
+        Ok(()) => {}
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    team.owner_id = body.user_id;
+
+    match team_service.create_team(team).await {
+        Ok(_) => (StatusCode::OK).into_response(),
         Err(error) => {
             println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
