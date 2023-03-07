@@ -499,7 +499,7 @@ async fn join_team(
                 println!("# Invite Delete Error: {error:?}");
             }
 
-            let url = format!("https://tokkitang.com");
+            let url = "https://tokkitang.com".to_string();
 
             Redirect::permanent(url.as_str()).into_response()
         }
