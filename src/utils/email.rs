@@ -16,7 +16,7 @@ pub async fn send_email(target: &str, title: &str, content: &str) -> Result<(), 
             aws_sdk_ses::model::Message::builder()
                 .body(
                     aws_sdk_ses::model::Body::builder()
-                        .text(aws_sdk_ses::model::Content::builder().data(content).build())
+                        .html(aws_sdk_ses::model::Content::builder().data(content).build())
                         .build(),
                 )
                 .subject(aws_sdk_ses::model::Content::builder().data(title).build())

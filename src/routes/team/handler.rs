@@ -9,11 +9,12 @@ use axum::{
     Extension, Json, Router,
 };
 use futures::future::join_all;
+use uuid::Uuid;
 
 use crate::{
     extensions::CurrentUser,
     middlewares::auth,
-    models::{InsertUser, Team, TeamUser, TeamUserAuthority, User},
+    models::{InsertUser, Team, TeamInvite, TeamUser, TeamUserAuthority, User},
     routes::{
         auth::AuthService,
         project::{
@@ -22,14 +23,14 @@ use crate::{
         },
         user::UserService,
     },
-    utils::{generate_uuid, hash_password},
+    utils::{generate_uuid, hash_password, send_email, AllError},
 };
 
 use super::{
     dto::{
         CreateTeamRequest, CreateTeamResponse, GetTeamItem, GetTeamListItem, GetTeamListResponse,
-        GetTeamResponse, GetTeamUserListItem, GetTeamUserListResponse, UpdateTeamRequest,
-        UpdateTeamResponse,
+        GetTeamResponse, GetTeamUserListItem, GetTeamUserListResponse, InviteUserToTeamRequest,
+        UpdateTeamRequest, UpdateTeamResponse,
     },
     TeamService,
 };
@@ -41,6 +42,7 @@ pub async fn router() -> Router {
         .route("/:team_id", put(update_team))
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
+        .route("/:team_id/user/invite", post(invite_user))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }
@@ -353,4 +355,106 @@ async fn get_team_project_list(
     let response = GetProjectListResponse { list: project_list };
 
     Json(response).into_response()
+}
+
+async fn invite_user(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<InviteUserToTeamRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+    let user_service = UserService::new(database.clone());
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner는 Admin/Write/Read로 초대 가능
+            TeamUserAuthority::Owner => match body.authority {
+                TeamUserAuthority::Owner => {
+                    return (StatusCode::BAD_REQUEST).into_response();
+                }
+                _ => {}
+            },
+            // Admin은 Write/Read로 초대 가능
+            TeamUserAuthority::Admin => match body.authority {
+                TeamUserAuthority::Owner | TeamUserAuthority::Admin => {
+                    return (StatusCode::BAD_REQUEST).into_response();
+                }
+                _ => {}
+            },
+            _ => {
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let user_to_invite = match user_service.find_by_id(&body.user_id).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            println!("# User Not Found");
+            return (StatusCode::NOT_FOUND).into_response();
+        }
+        Err(error) => {
+            println!("# User Found Error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    let team_to_invite = match team_service.get_team_by_id(&team_id).await {
+        Ok(team) => team,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# Team Not Found");
+                return (StatusCode::NOT_FOUND).into_response();
+            } else {
+                println!("# Team Found Error: {error:?}");
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+    let team_name = team_to_invite.name;
+
+    let code = match team_service
+        .create_team_invite(TeamInvite {
+            code: Uuid::new_v4().to_string(),
+            team_id: team_id.clone(),
+            user_id: user_to_invite.id.clone(),
+            authority: body.authority,
+        })
+        .await
+    {
+        Ok(code) => code,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let title = format!("[{team_name}]팀에 초대합니다!");
+
+    let nickname = user_to_invite.nickname;
+    let host = "http://localhost:8080";
+    let invite_url = format!("{host}/team/{team_id}/invite/{code}",);
+    let content = format!(
+        r#"안녕하세요 {nickname}님, {team_name}팀에 초대합니다!<br> 초대 링크: <a href="{invite_url}">{invite_url}</a>"#
+    );
+
+    match send_email(
+        user_to_invite.email.as_str(),
+        title.as_str(),
+        content.as_str(),
+    )
+    .await
+    {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
 }

@@ -15,3 +15,6 @@ pub use note::*;
 
 pub mod project;
 pub use project::*;
+
+pub mod team_invite;
+pub use team_invite::*;
