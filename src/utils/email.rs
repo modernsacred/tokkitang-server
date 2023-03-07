@@ -31,7 +31,7 @@ pub async fn send_email(target: &str, title: &str, content: &str) -> Result<(), 
             Ok(())
         }
         Err(e) => {
-            println!("Error sending email: {:?}", e);
+            println!("Error sending email: {e:?}",);
             Err(AllError::AWSError(format!("{e:?}")))
         }
     }

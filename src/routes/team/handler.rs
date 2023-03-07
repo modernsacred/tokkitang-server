@@ -1,3 +1,4 @@
+#![allow(clippy::single_match)]
 use std::sync::Arc;
 
 use aws_sdk_dynamodb::Client;
@@ -43,7 +44,7 @@ pub async fn router() -> Router {
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
         .route("/:team_id/user/invite", post(invite_user))
-        .route("/:team_id/user/invite/:code", get(join_team))
+        .route("/:team_id/user/invite/:code/join", get(join_team))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }

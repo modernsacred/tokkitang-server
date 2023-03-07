@@ -30,10 +30,7 @@ impl TeamInvite {
             "authority".to_string(),
             AttributeValue::S(self.authority.to_owned().into()),
         );
-        map.insert(
-            "code".to_string(),
-            AttributeValue::S(self.code.to_owned().into()),
-        );
+        map.insert("code".to_string(), AttributeValue::S(self.code.to_owned()));
 
         Some(map)
     }
