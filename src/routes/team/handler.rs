@@ -273,15 +273,15 @@ async fn get_my_team_list(
 }
 
 async fn get_team_user_list(
-    //current_user: Extension<CurrentUser>,
+    current_user: Extension<CurrentUser>,
     database: Extension<Arc<Client>>,
     Path(team_id): Path<String>,
 ) -> impl IntoResponse {
-    // let user = if let Some(user) = current_user.user.clone() {
-    //     user
-    // } else {
-    //     return (StatusCode::UNAUTHORIZED).into_response();
-    // };
+    let _user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
 
     let user_service = UserService::new(database.clone());
     let team_service = TeamService::new(database.clone());

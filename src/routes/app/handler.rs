@@ -51,10 +51,6 @@ pub(crate) async fn router() -> Router {
 }
 
 async fn index() -> Html<&'static str> {
-    send_email("sssang97@naver.com", "테스트", "안녕하세요")
-        .await
-        .unwrap();
-
     Html("<h1>Hello, World!</h1>")
 }
 
