@@ -5,7 +5,7 @@ use axum::Extension;
 use std::error::Error;
 
 use crate::{
-    models::{Team, TeamUser},
+    models::{Team, TeamInvite, TeamUser},
     utils::AllError,
 };
 
@@ -196,6 +196,64 @@ impl TeamService {
                     Ok(None)
                 }
             }
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
+
+    pub async fn create_team_invite(&self, data: TeamInvite) -> Result<String, AllError> {
+        let input = data.to_hashmap();
+
+        match self
+            .client
+            .put_item()
+            .table_name(TeamInvite::NAME)
+            .set_item(input)
+            .send()
+            .await
+        {
+            Ok(_) => Ok(data.code),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
+
+    pub async fn get_team_invite_by_code(
+        &self,
+        code: impl Into<String>,
+    ) -> Result<TeamInvite, AllError> {
+        match self
+            .client
+            .scan()
+            .table_name(TeamInvite::NAME)
+            .filter_expression("code = :code")
+            .expression_attribute_values(":code", AttributeValue::S(code.into()))
+            .send()
+            .await
+        {
+            Ok(data) => data
+                .items()
+                .and_then(|items| {
+                    items
+                        .first()
+                        .and_then(|item| TeamInvite::from_hashmap(item.to_owned()))
+                })
+                .ok_or(AllError::NotFound),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
+
+    pub async fn delete_team_invite_by_code(
+        &self,
+        code: impl Into<String>,
+    ) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(TeamInvite::NAME)
+            .key("code", AttributeValue::S(code.into()))
+            .send()
+            .await
+        {
+            Ok(_data) => Ok(()),
             Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
         }
     }

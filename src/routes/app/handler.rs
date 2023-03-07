@@ -18,6 +18,7 @@ use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
 use crate::middlewares::auth_middleware;
 use crate::routes::{auth, entity, note, project, redirect, team, user, utils};
+use crate::utils::send_email;
 
 pub(crate) async fn router() -> Router {
     let trace = TraceLayer::new_for_http()

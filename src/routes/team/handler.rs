@@ -1,19 +1,21 @@
+#![allow(clippy::single_match)]
 use std::sync::Arc;
 
 use aws_sdk_dynamodb::Client;
 use axum::{
     extract::Path,
     http::StatusCode,
-    response::{Html, IntoResponse},
+    response::{Html, IntoResponse, Redirect},
     routing::{delete, get, post, put},
     Extension, Json, Router,
 };
 use futures::future::join_all;
+use uuid::Uuid;
 
 use crate::{
     extensions::CurrentUser,
     middlewares::auth,
-    models::{InsertUser, Team, TeamUser, TeamUserAuthority, User},
+    models::{InsertUser, Team, TeamInvite, TeamUser, TeamUserAuthority, User},
     routes::{
         auth::AuthService,
         project::{
@@ -22,14 +24,15 @@ use crate::{
         },
         user::UserService,
     },
-    utils::{generate_uuid, hash_password},
+    utils::{generate_uuid, hash_password, send_email, AllError},
 };
 
 use super::{
     dto::{
-        CreateTeamRequest, CreateTeamResponse, GetTeamItem, GetTeamListItem, GetTeamListResponse,
-        GetTeamResponse, GetTeamUserListItem, GetTeamUserListResponse, UpdateTeamRequest,
-        UpdateTeamResponse,
+        ChangeAuthorityRequest, CreateTeamRequest, CreateTeamResponse, GetTeamItem,
+        GetTeamListItem, GetTeamListResponse, GetTeamResponse, GetTeamUserListItem,
+        GetTeamUserListResponse, InviteUserToTeamRequest, TransferOwnershipRequest,
+        UpdateTeamRequest, UpdateTeamResponse,
     },
     TeamService,
 };
@@ -41,6 +44,10 @@ pub async fn router() -> Router {
         .route("/:team_id", put(update_team))
         .route("/:team_id", delete(delete_team))
         .route("/:team_id/user/list", get(get_team_user_list))
+        .route("/:team_id/user/invite", post(invite_user))
+        .route("/:team_id/user/invite/:code/join", get(join_team))
+        .route("/:team_id/ownership/transfer", post(transfer_ownership))
+        .route("/:team_id/user/authority", put(change_authority))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }
@@ -273,15 +280,15 @@ async fn get_my_team_list(
 }
 
 async fn get_team_user_list(
-    //current_user: Extension<CurrentUser>,
+    current_user: Extension<CurrentUser>,
     database: Extension<Arc<Client>>,
     Path(team_id): Path<String>,
 ) -> impl IntoResponse {
-    // let user = if let Some(user) = current_user.user.clone() {
-    //     user
-    // } else {
-    //     return (StatusCode::UNAUTHORIZED).into_response();
-    // };
+    let _user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
 
     let user_service = UserService::new(database.clone());
     let team_service = TeamService::new(database.clone());
@@ -353,4 +360,329 @@ async fn get_team_project_list(
     let response = GetProjectListResponse { list: project_list };
 
     Json(response).into_response()
+}
+
+async fn invite_user(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<InviteUserToTeamRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+    let user_service = UserService::new(database.clone());
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner는 Admin/Write/Read로 초대 가능
+            TeamUserAuthority::Owner => match body.authority {
+                TeamUserAuthority::Owner => {
+                    return (StatusCode::BAD_REQUEST).into_response();
+                }
+                _ => {}
+            },
+            // Admin은 Write/Read로 초대 가능
+            TeamUserAuthority::Admin => match body.authority {
+                TeamUserAuthority::Owner | TeamUserAuthority::Admin => {
+                    return (StatusCode::BAD_REQUEST).into_response();
+                }
+                _ => {}
+            },
+            _ => {
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let user_to_invite = match user_service.find_by_id(&body.user_id).await {
+        Ok(Some(user)) => user,
+        Ok(None) => {
+            println!("# User Not Found");
+            return (StatusCode::NOT_FOUND).into_response();
+        }
+        Err(error) => {
+            println!("# User Found Error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    if user_to_invite.id == user.id {
+        println!("# User is same");
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
+    let team_to_invite = match team_service.get_team_by_id(&team_id).await {
+        Ok(team) => team,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# Team Not Found");
+                return (StatusCode::NOT_FOUND).into_response();
+            } else {
+                println!("# Team Found Error: {error:?}");
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+    let team_name = team_to_invite.name;
+
+    let code = match team_service
+        .create_team_invite(TeamInvite {
+            code: Uuid::new_v4().to_string(),
+            team_id: team_id.clone(),
+            user_id: user_to_invite.id.clone(),
+            authority: body.authority,
+        })
+        .await
+    {
+        Ok(code) => code,
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    let title = format!("[{team_name}]팀에 초대합니다!");
+
+    let nickname = user_to_invite.nickname;
+    let host = "https://ksauqt5f5er2djql3atquzas4e0ofpla.lambda-url.ap-northeast-2.on.aws";
+    let invite_url = format!("{host}/team/{team_id}/user/invite/{code}/join",);
+    let content = format!(
+        r#"안녕하세요 {nickname}님, {team_name}팀에 초대합니다!<br> 초대 링크: <a href="{invite_url}">{invite_url}</a>"#
+    );
+
+    match send_email(
+        user_to_invite.email.as_str(),
+        title.as_str(),
+        content.as_str(),
+    )
+    .await
+    {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(_) => (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    }
+}
+
+async fn join_team(
+    database: Extension<Arc<Client>>,
+    Path((team_id, code)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let team_service = TeamService::new(database.clone());
+
+    let invite = match team_service.get_team_invite_by_code(&code).await {
+        Ok(invite) => invite,
+        Err(_) => {
+            println!("# Invite Not Found");
+            return (StatusCode::NOT_FOUND).into_response();
+        }
+    };
+
+    if invite.team_id != team_id {
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
+    let team_user_data = TeamUser {
+        team_id: invite.team_id,
+        user_id: invite.user_id,
+        authority: invite.authority,
+    };
+
+    match team_service.create_team_user(team_user_data).await {
+        Ok(()) => {
+            if let Err(error) = team_service.delete_team_invite_by_code(&code).await {
+                println!("# Invite Delete Error: {error:?}");
+            }
+
+            let url = "https://tokkitang.com".to_string();
+
+            Redirect::permanent(url.as_str()).into_response()
+        }
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
+}
+
+async fn transfer_ownership(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<TransferOwnershipRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    let mut team = match team_service.get_team_by_id(&team_id).await {
+        Ok(team) => team,
+        Err(error) => {
+            if let AllError::NotFound = error {
+                println!("# Team Not Found");
+                return (StatusCode::NOT_FOUND).into_response();
+            } else {
+                println!("# Team Found Error: {error:?}");
+                return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+            }
+        }
+    };
+
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner만 사용가능
+            TeamUserAuthority::Owner => {}
+            _ => {
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    match team_service
+        .create_team_user(TeamUser {
+            team_id: team_id.clone(),
+            user_id: user.id,
+            authority: TeamUserAuthority::Admin,
+        })
+        .await
+    {
+        Ok(()) => {}
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    match team_service
+        .create_team_user(TeamUser {
+            team_id: team_id.clone(),
+            user_id: body.user_id.clone(),
+            authority: TeamUserAuthority::Owner,
+        })
+        .await
+    {
+        Ok(()) => {}
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
+
+    team.owner_id = body.user_id;
+
+    match team_service.create_team(team).await {
+        Ok(_) => (StatusCode::OK).into_response(),
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
+}
+
+async fn change_authority(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path(team_id): Path<String>,
+    Json(body): Json<ChangeAuthorityRequest>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    if user.id == body.user_id {
+        println!("# You can't change your own authority");
+        return (StatusCode::BAD_REQUEST).into_response();
+    }
+
+    let team_service = TeamService::new(database.clone());
+
+    // 존재여부 체크
+    let target_authority = match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &body.user_id)
+        .await
+    {
+        Ok(Some(team_user)) => team_user.authority,
+        Ok(None) => return (StatusCode::NOT_FOUND).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    // 권한 체크
+    let your_authority = match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner/Admin만 사용가능
+            TeamUserAuthority::Owner | TeamUserAuthority::Admin => team_user.authority,
+            _ => {
+                println!("# You are not owner or admin");
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => {
+            println!("# You are not a member of this team");
+            return (StatusCode::FORBIDDEN).into_response();
+        }
+        Err(error) => {
+            println!("# Error while finding your authority: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    // 수정할 대상 유저의 권한 체크
+    match your_authority {
+        TeamUserAuthority::Owner => {}
+        TeamUserAuthority::Admin => {
+            match target_authority {
+                TeamUserAuthority::Owner | TeamUserAuthority::Admin => {
+                    println!("You can't change authority of owner or admin");
+                    return (StatusCode::FORBIDDEN).into_response();
+                }
+                _ => {}
+            }
+
+            match body.authority {
+                TeamUserAuthority::Owner | TeamUserAuthority::Admin => {
+                    println!("You can't change authority to owner or admin");
+                    return (StatusCode::FORBIDDEN).into_response();
+                }
+                _ => {}
+            }
+        }
+        _ => {
+            unreachable!();
+        }
+    }
+
+    // 변경
+    match team_service
+        .create_team_user(TeamUser {
+            team_id: team_id.clone(),
+            user_id: body.user_id,
+            authority: body.authority,
+        })
+        .await
+    {
+        Ok(()) => (StatusCode::OK).into_response(),
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
 }
