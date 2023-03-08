@@ -48,6 +48,7 @@ pub async fn router() -> Router {
         .route("/:team_id/user/invite/:code/join", get(join_team))
         .route("/:team_id/ownership/transfer", post(transfer_ownership))
         .route("/:team_id/user/authority", put(change_authority))
+        .route("/:team_id/user/:user_id", delete(delete_team_user))
         .route("/:team_id/project/list", get(get_team_project_list))
         .route("/my/list", get(get_my_team_list))
 }
@@ -503,6 +504,74 @@ async fn join_team(
 
             Redirect::permanent(url.as_str()).into_response()
         }
+        Err(error) => {
+            println!("error: {error:?}");
+            (StatusCode::INTERNAL_SERVER_ERROR).into_response()
+        }
+    }
+}
+
+async fn delete_team_user(
+    current_user: Extension<CurrentUser>,
+    database: Extension<Arc<Client>>,
+    Path((team_id, user_id)): Path<(String, String)>,
+) -> impl IntoResponse {
+    let user = if let Some(user) = current_user.user.clone() {
+        user
+    } else {
+        return (StatusCode::UNAUTHORIZED).into_response();
+    };
+
+    let team_service = TeamService::new(database.clone());
+
+    // 요청자 권한 확인
+    let your_authority = match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user.id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            TeamUserAuthority::Owner | TeamUserAuthority::Admin => team_user.authority,
+            _ => {
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+        },
+        Ok(None) => return (StatusCode::FORBIDDEN).into_response(),
+        Err(_) => return (StatusCode::INTERNAL_SERVER_ERROR).into_response(),
+    };
+
+    // 피-삭제자의 권한을 확인
+    match team_service
+        .find_team_user_by_team_and_user_id(&team_id, &user_id)
+        .await
+    {
+        Ok(Some(team_user)) => match team_user.authority {
+            // Owner는 삭제할 수 없음
+            TeamUserAuthority::Owner => {
+                println!("Owner can't be deleted");
+                return (StatusCode::FORBIDDEN).into_response();
+            }
+            // Admin은 Owner만 삭제할 수 있음
+            TeamUserAuthority::Admin => {
+                if let TeamUserAuthority::Owner = your_authority {
+                } else {
+                    println!("Admin can't be deleted by Admin");
+                    return (StatusCode::FORBIDDEN).into_response();
+                }
+            }
+            _ => {}
+        },
+        Ok(None) => {
+            println!("# Team User Not Found");
+            return (StatusCode::NOT_FOUND).into_response();
+        }
+        Err(error) => {
+            println!("# Team User Find Error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    };
+
+    match team_service.delete_team_user(&team_id, &user_id).await {
+        Ok(()) => (StatusCode::OK).into_response(),
         Err(error) => {
             println!("error: {error:?}");
             (StatusCode::INTERNAL_SERVER_ERROR).into_response()
