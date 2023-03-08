@@ -72,7 +72,7 @@ impl TeamService {
         match self
             .client
             .delete_item()
-            .table_name(Team::NAME)
+            .table_name(TeamUser::NAME)
             .key("team_id", AttributeValue::S(team_id.into()))
             .key("user_id", AttributeValue::S(user_id.into()))
             .send()
