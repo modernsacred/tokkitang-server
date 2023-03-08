@@ -64,6 +64,25 @@ impl TeamService {
         }
     }
 
+    pub async fn delete_team_user(
+        &self,
+        team_id: impl Into<String>,
+        user_id: impl Into<String>,
+    ) -> Result<(), AllError> {
+        match self
+            .client
+            .delete_item()
+            .table_name(Team::NAME)
+            .key("team_id", AttributeValue::S(team_id.into()))
+            .key("user_id", AttributeValue::S(user_id.into()))
+            .send()
+            .await
+        {
+            Ok(_) => Ok(()),
+            Err(error) => Err(AllError::AWSError(format!("{error:?}"))),
+        }
+    }
+
     pub async fn get_team_by_id(&self, team_id: impl Into<String>) -> Result<Team, AllError> {
         match self
             .client
