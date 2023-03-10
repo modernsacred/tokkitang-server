@@ -4,6 +4,7 @@ use std::{collections::HashMap, error::Error};
 
 use aws_sdk_dynamodb::Client;
 use axum::body::{Body, BoxBody};
+use axum::middleware::from_fn;
 use axum::{
     http::{HeaderMap, Request, Response, StatusCode},
     middleware,
@@ -16,7 +17,7 @@ use tracing::{Level, Span};
 
 use crate::extensions::{CurrentUser, DynamoClient, S3Client};
 
-use crate::middlewares::auth_middleware;
+use crate::middlewares::{auth_middleware, response_header_middleware};
 use crate::routes::{auth, entity, note, project, redirect, team, user, utils};
 use crate::utils::send_email;
 
@@ -44,6 +45,7 @@ pub(crate) async fn router() -> Router {
         .nest("/project", project::router().await)
         .nest("/note", note::router().await)
         .nest("/entity", entity::router().await)
+        .route_layer(from_fn(response_header_middleware))
         .route_layer(middleware::from_fn(auth_middleware))
         .layer(Extension(DynamoClient::get_client().await))
         .layer(Extension(S3Client::get_client().await))
