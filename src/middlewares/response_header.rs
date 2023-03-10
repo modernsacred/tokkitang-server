@@ -7,11 +7,9 @@ pub async fn response_header_middleware<B>(req: Request<B>, next: Next<B>) -> Re
 
     headers.insert(
         "Access-Control-Allow-Origin",
-        "https://tokkitang.com".parse().unwrap(),
-    );
-    headers.insert(
-        "Access-Control-Allow-Origin",
-        "http://localhost:5173".parse().unwrap(),
+        "https://tokkitang.com; http://localhost:5173"
+            .parse()
+            .unwrap(),
     );
 
     response
