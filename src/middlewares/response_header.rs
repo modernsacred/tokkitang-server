@@ -8,7 +8,9 @@ pub async fn response_header_middleware<B>(req: Request<B>, next: Next<B>) -> Re
     if let Some(origin) = origin {
         let response_headers = response.headers_mut();
 
-        response_headers.insert("Access-Control-Allow-Origin", origin);
+        if !response_headers.contains_key("Access-Control-Allow-Origin") {
+            response_headers.insert("Access-Control-Allow-Origin", origin);
+        }
     }
 
     response
