@@ -25,7 +25,12 @@ pub(crate) async fn router() -> Router {
 }
 
 async fn get_github_code(Query(query): Query<GithubRedirectCodeRequest>) -> impl IntoResponse {
-    let url = format!("https://tokkitang.com/redirect/github?code={}", query.code);
+    let base_url = query
+        .redirect_url
+        .unwrap_or_else(|| "https://tokkitang.com/redirect/github".to_string());
+    let code = query.code;
+
+    let url = format!("{base_url}?code={code}",);
 
     Redirect::permanent(url.as_str()).into_response()
 }
