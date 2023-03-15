@@ -2,6 +2,7 @@ use std::sync::Arc;
 
 use aws_sdk_dynamodb::Client;
 use axum::{
+    extract::Query,
     http::StatusCode,
     response::{Html, IntoResponse},
     routing::{get, post},
@@ -17,7 +18,10 @@ use crate::{
 };
 
 use super::{
-    dto::{MyInfoResponse, SignupGithubRequest, SignupRequest, SignupResponse},
+    dto::{
+        GetEmailDuplicateRequest, GetEmailDuplicateResponse, MyInfoResponse, SignupGithubRequest,
+        SignupRequest, SignupResponse,
+    },
     UserService,
 };
 
@@ -26,6 +30,7 @@ pub async fn router() -> Router {
         .route("/signup", post(signup))
         .route("/signup/github", post(signup_github))
         .route("/my/info", get(get_my_info))
+        .route("/email/duplicate", get(get_email_duplicate))
 }
 
 async fn signup(
@@ -167,4 +172,29 @@ async fn get_my_info(
     };
 
     Json(response).into_response()
+}
+
+async fn get_email_duplicate(
+    database: Extension<Arc<Client>>,
+    Query(body): Query<GetEmailDuplicateRequest>,
+) -> impl IntoResponse {
+    let service = UserService::new(database.clone());
+
+    match service.exists_email(&body.email).await {
+        Ok(exists) => {
+            if exists {
+                let response = GetEmailDuplicateResponse { duplicate: true };
+
+                return (Json(response)).into_response();
+            } else {
+                let response = GetEmailDuplicateResponse { duplicate: false };
+
+                return (Json(response)).into_response();
+            }
+        }
+        Err(error) => {
+            println!("error: {error:?}");
+            return (StatusCode::INTERNAL_SERVER_ERROR).into_response();
+        }
+    }
 }
