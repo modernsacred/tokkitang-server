@@ -4,6 +4,6 @@ use serde::{Deserialize, Serialize};
 pub struct SignupGithubRequest {
     pub nickname: String,
     pub email: String,
-
+    pub thumbnail_url: Option<String>,
     pub access_token: String,
 }
