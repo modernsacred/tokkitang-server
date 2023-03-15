@@ -51,7 +51,6 @@ impl AuthService {
 
         let client = reqwest::Client::new();
 
-        println!("1");
         let result = client
             .post("https://github.com/login/oauth/access_token")
             .body(body)
@@ -69,11 +68,7 @@ impl AuthService {
             scope: String,
         }
 
-        println!("2");
         let result = result.text().await.ok()?;
-
-        println!("3");
-        println!("{:?}", result);
 
         let result = serde_json::from_str::<GetAccessTokenResponseBody>(result.as_str()).ok()?;
 
