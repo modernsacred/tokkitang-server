@@ -139,6 +139,7 @@ async fn signup_github(
     match service.create_user(user_data).await {
         Ok(user_id) => {
             response.access_token = auth_service.get_access_token(user_id);
+            response.success = true;
             Json(response).into_response()
         }
         Err(error) => {
